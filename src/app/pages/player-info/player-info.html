@@ -1,0 +1,42 @@
+<header>
+    <div class="row">
+        <a class="col-2" routerLink="/home">
+            <mat-icon>arrow_back</mat-icon>
+        </a>
+        <div class="col-8 text-center">
+            <span class="titie">Player Info</span>
+        </div>
+    </div>
+</header>
+
+<main>
+    <form #playerForm="ngForm" (ngSubmit)="initPlayers()">
+        <ng-container *ngFor="let player of players; let i = index">
+            <div class="mb-5">
+                <h3 class="">Player{{ i + 1 }}</h3>
+                <div class="row mb-2">
+                    <label class="col-4">Name:</label>
+                    <input class="col-7" id="name{{i}}" name="name{{i}}" type="text" [(ngModel)]="player.name"  required maxlength="8">
+                    <mat-icon class="col">search</mat-icon>
+                </div>
+                <!-- todo : スキルレベルのインジケーター -->
+                <div class="row mb-2">
+                    <label class="col-4">Skill level:</label>
+                    <input class="col-7" id="skillLevel{{i}}" name="skillLevel{{i}}" type="number" [(ngModel)]="player.skillLevel"  required min="1" max="9">
+                </div>
+                <div class="row mb-2">
+                    <label class="col-4">Race to:</label>
+                    <input class="col-7" id="goal{{i}}" name="goal{{i}}" type="number" [(ngModel)]="player.goal"  required min="1" max="99">
+                    <mat-icon class="col">info</mat-icon>
+                </div>
+            </div>
+        </ng-container>
+
+        <div class="row d-flex justify-content-center">
+            <button class="start-btn col-10 row p-3">
+                <img class="col-6" src="" alt="ラック">
+                <div class="col-6">Start game!</div>
+            </button>
+        </div>
+    </form>
+</main>

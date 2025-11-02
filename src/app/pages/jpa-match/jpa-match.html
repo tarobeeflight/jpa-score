@@ -1,0 +1,95 @@
+<header>
+    <div class="row">
+        <a class="col-4" routerLink="/home">
+            <mat-icon>arrow_back</mat-icon>
+        </a>
+        <div class="col-4 text-center">
+            <span class="titie">JPR match!</span>
+        </div>
+        <div class="col-4 fs-6 text-end">
+            <span>開始時刻 {{startTime | date : 'hh:mm'}}</span>
+        </div>
+    </div>
+</header>
+
+<main>
+    <!-- プレイヤー情報 -->
+    <div class="player-board row mb-2">
+        <ng-container *ngFor="let player of players">
+            <div class="col-6">
+                <div class="fs-3 mb-1 text-center">{{player.name}}</div>
+                <div class="d-flex justify-content-center px-2 mb-4 fs-5">
+                    <div class="me-3">SL: {{player.skillLevel}}</div>
+                    <div>Goal: {{player.goal}}</div>
+                </div>
+                <div class="text-center fs-1">{{player.score}}</div>
+            </div>
+        </ng-container>
+    </div>
+
+    <!-- ゲーム情報 -->
+    <div class="row fs-4">
+        <div class="col-4 text-center">Rack:{{rack}}</div>
+        <div class="col-4 text-center">Inning:{{totalInning}}</div>
+        <div class="col-4 text-center">Dead:{{dead}}</div>
+    </div>
+    <!-- イニング内容 -->
+    <div class="py-2 px-4 border-top border-bottom border-3 mb-2">
+        <ng-container *ngFor="let inning of [1, 2, 3, 4, 5, 6]">
+            <div class="row fs-5 border-bottom " style="min-height: 1.5rem;">
+                <ng-container *ngIf="inning===1">
+                    <div class="col-5">Break ①</div>
+                    <div class="col-2 text-center">*1</div>
+                </ng-container>
+                <ng-container *ngIf="inning!==1">
+                    <div class="col-5"></div>
+                    <div class="col-2"></div>
+                </ng-container>
+                <div class="col-5"></div>
+            </div>
+        </ng-container>
+    </div>
+    <!-- ボール -->
+    <ng-container *ngFor="let row of [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]">
+        <div class="row justify-content-around mb-2">
+            <ng-container *ngFor="let ball of row">
+                <div class="col-2">
+                    <ng-container *ngIf="ball!==10" ngIfElse="">
+                        <img src="" alt="球{{ball}}">
+                    </ng-container>
+                </div>
+            </ng-container>
+        </div>
+    </ng-container>
+    <!-- ボタン -->
+    <div class="row">
+        <!-- deadボタン -->
+        <div class="col-3 text-center">
+            <button (onclick)="clickDead()">
+                <img src="" alt="dead">
+                <div>dead</div>
+            </button>
+        </div>
+        <!-- safetyボタン -->
+        <div class="col-3 text-center">
+            <button (onclick)="clickSafety()">
+                <img src="" alt="safety">
+                <div>safety</div>
+            </button>
+        </div>
+        <!-- switchボタン -->
+        <div class="col-3 text-center">
+            <button (onclick)="clickSwitch()">
+                <img src="" alt="switch">
+                <div>switch</div>
+            </button>
+        </div>
+        <!-- undoボタン -->
+        <div class="col-3 text-center">
+            <button (onclick)="clickUndo()">
+                <img src="" alt="undo">
+                <div>undo</div>
+            </button>
+        </div>
+    </div>
+</main>

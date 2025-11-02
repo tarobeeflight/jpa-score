@@ -1,1 +1,39 @@
-/* You can add global styles to this file, and also import other style files */
+
+@use '@angular/material' as mat;
+@import "bootstrap/scss/bootstrap";
+
+$primary-color: #153;
+$secondary-color: #113322;
+$success-color: #28a745;
+$character-color: #eee;
+
+html {
+    margin: 0;
+    height: 100%; 
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    height: 100%; 
+}
+
+header {
+    width: 100%;
+    background-color: $secondary-color;
+    color: $character-color;
+    padding: 0.5rem;
+}
+
+header .title {
+    font-size: 2rem;
+}
+
+
+main {
+    height: 100%; 
+    width: 100%;
+    background-color: $primary-color;
+    color: $character-color;
+    padding: 1rem 2rem;
+}

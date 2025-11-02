@@ -1,0 +1,9 @@
+@use '../../../styles.scss' as *;
+
+button {
+    color: $character-color;
+    border: solid 2px black;
+    border-radius: 5px;
+    height: 3rem;
+    font-size: 2rem;
+}
