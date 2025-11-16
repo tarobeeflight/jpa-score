@@ -53,9 +53,11 @@
     <ng-container *ngFor="let row of [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]">
         <div class="row justify-content-around mb-2">
             <ng-container *ngFor="let ball of row">
-                <div class="col-2">
+                <div style="width: 20%;">
                     <ng-container *ngIf="ball!==10" ngIfElse="">
-                        <img src="" alt="球{{ball}}">
+                        <button class="image-container" (onclick)="clickBall(ball)">
+                            <img src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
+                        </button>
                     </ng-container>
                 </div>
             </ng-container>
@@ -64,31 +66,39 @@
     <!-- ボタン -->
     <div class="row">
         <!-- deadボタン -->
-        <div class="col-3 text-center">
+        <div class="col-3">
             <button (onclick)="clickDead()">
-                <img src="" alt="dead">
-                <div>dead</div>
+                <div class="image-container">
+                    <img src="assets/images/button/dead.svg" alt="dead">
+                </div>
+                <div class="button-text">dead</div>
             </button>
         </div>
         <!-- safetyボタン -->
-        <div class="col-3 text-center">
+        <div class="col-3">
             <button (onclick)="clickSafety()">
-                <img src="" alt="safety">
-                <div>safety</div>
+                <div class="image-container">
+                    <img src="assets/images/button/safety.svg" alt="safety">
+                </div>
+                <div class="button-text">safety</div>
             </button>
         </div>
         <!-- switchボタン -->
-        <div class="col-3 text-center">
+        <div class="col-3">
             <button (onclick)="clickSwitch()">
-                <img src="" alt="switch">
-                <div>switch</div>
+                <div class="image-container">
+                    <img src="assets/images/button/switch.svg" alt="switch">
+                </div>
+                <div class="button-text">switch</div>
             </button>
         </div>
         <!-- undoボタン -->
-        <div class="col-3 text-center">
+        <div class="col-3">
             <button (onclick)="clickUndo()">
-                <img src="" alt="undo">
-                <div>undo</div>
+                <div class="image-container">
+                    <img src="assets/images/button/undo.svg" alt="undo">
+                </div>
+                <div class="button-text">undo</div>
             </button>
         </div>
     </div>

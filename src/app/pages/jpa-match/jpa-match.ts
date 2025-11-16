@@ -40,4 +40,8 @@ export class JpaMatch implements OnInit {
   clickUndo() {
     
   }
+
+  clickBall(ball: number) {
+    console.log(`Clicked ball: ${ball}`);
+  }
 }

@@ -1,4 +1,21 @@
+@import '../../../styles/variables';
+
 .player-board {
     padding: 0.5rem 0;
     background-color: #155;
  }
+
+button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+}
+
+.button-text {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    color: $character-color;
+    text-align: center;
+    font-size: 4vw; 
+}
