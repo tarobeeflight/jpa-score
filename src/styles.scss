@@ -1,8 +1,9 @@
 
 @use '@angular/material' as mat;
-@import "bootstrap/scss/bootstrap";
+@use "styles/variables" as *;
+@use "bootstrap/scss/bootstrap";
 
-@import "styles/variables";
+
 
 html {
     margin: 0;
@@ -13,13 +14,13 @@ html {
 body {
     margin: 0;
     height: 100%; 
-    background-color: $primary-color;
+    background-color: $background-color;
 }
 
 header {
     width: 100%;
-    background-color: $secondary-color;
-    color: $character-color;
+    background-color: $header-color;
+    color: $active-text-color;
     padding: 0.5rem;
 }
 
@@ -31,8 +32,8 @@ header .title {
 main {
     height: 100vh; 
     width: 100vw;
-    background-color: $primary-color;
-    color: $character-color;
+    background-color: $background-color;
+    color: $active-text-color;
     padding: 1rem 2rem;
 }
 

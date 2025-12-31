@@ -1,10 +1,10 @@
 <!-- ヘッダー -->
 <header>
     <div class="row">
-        <a class="col-2 back-btn" routerLink="/home">
+        <button class="col-2 back-btn d-flex justify-content-start" (click)="goBack()">
             <mat-icon class="me-1 py-auto">arrow_back</mat-icon>
             <span class="align-top" >戻る</span>
-        </a>
+        </button>
         <div class="col-8 text-center">
             <span class="titie">Player Info</span>
         </div>
@@ -24,7 +24,7 @@
                     <input class="col-7 text-box" id="name{{i}}" name="name{{i}}" type="text" [(ngModel)]="player.name"  required maxlength="8">
                     <mat-icon class="col">search</mat-icon>
                 </div>
-                <!-- todo : スキルレベルのインジケーター -->
+                <!-- todo : スキルレベルのインジケーターをコンポーネントにする -->
                  <!-- スキルレベル -->
                 <div class="row mb-2">
                     <label class="col-4 fs-4">Skill level:</label>
@@ -43,7 +43,7 @@
 
         <!-- スタートボタン -->
         <div class="d-flex justify-content-center">
-            <button class="start-btn col-10 p-3 d-flex justify-content-around align-items-center">
+            <button class="start-btn col-10 p-3 d-flex justify-content-around align-items-center" (click)="goMatch()">
                     <div class="image-rack-container">
                         <img src="assets/images/ball/rack.svg" alt="ラック">
                     </div>

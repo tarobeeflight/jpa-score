@@ -7,5 +7,5 @@ export const routes: Routes = [
     {path: 'home', component: Home },
     {path: 'player-info', component: PlayerInfo },
     {path: 'jpa-match', component: JpaMatch },
-    {path: '**', redirectTo: 'jpa-match' }
+    {path: '**', redirectTo: 'home' }
 ];

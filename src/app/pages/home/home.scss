@@ -1,7 +1,7 @@
-@use '../../../styles.scss' as *;
+@use "../../../styles/variables" as *;
 
 button {
-    color: $character-color;
+    color: $active-text-color;
     border: solid 2px black;
     border-radius: 5px;
     height: 3rem;
@@ -10,5 +10,5 @@ button {
 
 .title-text {
     font-size: 6vh;
-    color: $character-color;
+    color: $active-text-color;
 }

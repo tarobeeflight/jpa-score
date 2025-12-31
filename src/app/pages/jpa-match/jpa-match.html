@@ -1,8 +1,11 @@
 <header>
     <div class="row">
-        <a class="col-4" routerLink="/home">
-            <mat-icon>arrow_back</mat-icon>
-        </a>
+        <div class="col-4">
+            <button class="back-btn d-flex justify-content-start" (click)="goBack()">
+                <mat-icon class="me-1 py-auto">arrow_back</mat-icon>
+                <span class="align-top">戻る</span>
+            </button>
+        </div>
         <div class="col-4 text-center">
             <span class="titie">JPR match!</span>
         </div>
@@ -14,6 +17,7 @@
 
 <main>
     <!-- プレイヤー情報 -->
+     <!-- todo : 手番をハイライト -->
     <div class="player-board row mb-2">
         <ng-container *ngFor="let player of players">
             <div class="col-6">
@@ -22,30 +26,44 @@
                     <div class="me-3">SL: {{player.skillLevel}}</div>
                     <div>Goal: {{player.goal}}</div>
                 </div>
-                <div class="text-center fs-1">{{player.score}}</div>
+                <div class="text-center fs-1">{{getScore(player.id)}}</div>
             </div>
         </ng-container>
     </div>
 
     <!-- ゲーム情報 -->
     <div class="row fs-4">
-        <div class="col-4 text-center">Rack:{{rack}}</div>
-        <div class="col-4 text-center">Inning:{{totalInning}}</div>
-        <div class="col-4 text-center">Dead:{{dead}}</div>
+        <div class="col-4 text-center">Rack:{{currentRack}}</div>
+        <div class="col-4 text-center">Inning:{{currentInning}}</div>
+        <div class="col-4 text-center">Dead:{{deadCount}}</div>
     </div>
     <!-- イニング内容 -->
     <div class="py-2 px-4 border-top border-bottom border-3 mb-2">
-        <ng-container *ngFor="let inning of [1, 2, 3, 4, 5, 6]">
+        <ng-container *ngFor="let inningRecord of inningRecords; let i = index">
             <div class="row fs-5 border-bottom " style="min-height: 1.5rem;">
-                <ng-container *ngIf="inning===1">
-                    <div class="col-5">Break ①</div>
-                    <div class="col-2 text-center">*1</div>
-                </ng-container>
-                <ng-container *ngIf="inning!==1">
-                    <div class="col-5"></div>
-                    <div class="col-2"></div>
-                </ng-container>
-                <div class="col-5"></div>
+                <!-- プレイヤー１ -->
+                <div class="col-5">
+                    <ng-container *ngIf="inningRecord.isBreakPlayer1">Break</ng-container>
+                    <ng-container *ngFor="let ball of inningRecord.player1Pockets">
+
+                        <img class="pockets" src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
+                    </ng-container>
+                    <ng-container *ngIf="inningRecord.isSafetyPlayer1">S</ng-container>
+                </div>
+                <!-- イニング数 -->
+                <div class="col-2 text-center">
+                    <ng-container *ngIf="inningRecord.inning === currentInning">*</ng-container>
+                    <ng-container *ngIf="inningRecord.inning !== 0">{{inningRecord.inning}}</ng-container>
+                </div>
+                <!-- プレイヤー２ -->
+                <div class="col-5">
+                    <ng-container *ngIf="inningRecord.isBreakPlayer2">Break</ng-container>
+                    <!-- todo : 画像取得メソッド -->
+                    <ng-container *ngFor="let ball of inningRecord.player2Pockets">
+                        <img class="pockets" src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
+                    </ng-container>
+                    <ng-container *ngIf="inningRecord.isSafetyPlayer2">S</ng-container>
+                </div>
             </div>
         </ng-container>
     </div>
@@ -55,7 +73,8 @@
             <ng-container *ngFor="let ball of row">
                 <div style="width: 20%;">
                     <ng-container *ngIf="ball!==10" ngIfElse="">
-                        <button class="image-container" (onclick)="clickBall(ball)">
+                        <button class="image-container ball-highlight" [disabled]="isDisabled(`ball${ball}`)" 
+                        [hidden]="isHidden(`ball${ball}`)" [class.ball-highlight]="isHighlight(`ball${ball}`)" (click)="clickBall(ball)">
                             <img src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
                         </button>
                     </ng-container>
@@ -67,7 +86,7 @@
     <div class="row">
         <!-- deadボタン -->
         <div class="col-3">
-            <button (onclick)="clickDead()">
+            <button [disabled]="isDisabled('btnDead')" (click)="clickDead()">
                 <div class="image-container">
                     <img src="assets/images/button/dead.svg" alt="dead">
                 </div>
@@ -76,7 +95,7 @@
         </div>
         <!-- safetyボタン -->
         <div class="col-3">
-            <button (onclick)="clickSafety()">
+            <button [disabled]="isDisabled('btnSafety')" (click)="clickSafety()">
                 <div class="image-container">
                     <img src="assets/images/button/safety.svg" alt="safety">
                 </div>
@@ -85,7 +104,7 @@
         </div>
         <!-- switchボタン -->
         <div class="col-3">
-            <button (onclick)="clickSwitch()">
+            <button [disabled]="isDisabled('btnSwitch')" (click)="clickSwitch()">
                 <div class="image-container">
                     <img src="assets/images/button/switch.svg" alt="switch">
                 </div>
@@ -94,7 +113,7 @@
         </div>
         <!-- undoボタン -->
         <div class="col-3">
-            <button (onclick)="clickUndo()">
+            <button [disabled]="isDisabled('btnUndo')" (click)="clickUndo()">
                 <div class="image-container">
                     <img src="assets/images/button/undo.svg" alt="undo">
                 </div>

@@ -1,8 +1,8 @@
-@import '../../../styles/variables';
+@use "../../../styles/variables" as *;
 
 .player-board {
     padding: 0.5rem 0;
-    background-color: #155;
+    background-color: $secondary-color;
  }
 
 button {
@@ -12,10 +12,35 @@ button {
     background-color: transparent;
 }
 
+button:disabled {
+    opacity: 0.5;
+    cursor: none;
+}
+
 .button-text {
     margin-top: 0.5rem;
     font-size: 1rem;
-    color: $character-color;
+    color: $active-text-color;
     text-align: center;
     font-size: 4vw; 
+}
+
+.back-btn {
+    border: none;
+    background-color: transparent;
+    color: $active-text-color;
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.pockets {
+    width: 2rem;
+    height: 2rem;
+    margin-right: 0.3rem;
+}
+
+.ball-highlight {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 1));
+    opacity: 0.5;
+    cursor: none;
 }
