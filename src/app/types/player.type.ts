@@ -1,5 +1,5 @@
 export type Player = {
-    id: number;
+    id: 1 | 2;
     name: string;
     skillLevel: number;
     goal: number;

@@ -1,9 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal, Signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { PlayerService } from '../../service/player-service';
-import { Router } from '@angular/router';
 import { ScoreService } from '../../service/score-service';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
@@ -15,11 +14,12 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
   styleUrl: './jpa-match.scss',
 })
 export class JpaMatch implements OnInit {
-  constructor(private router: Router, private location: Location, private playerSvc: PlayerService, private scoreSvc: ScoreService) { }
+  constructor(private location: Location, private playerSvc: PlayerService, private scoreSvc: ScoreService) { }
 
   players: Player[] = [];
   startTime: Date = new Date();
   readonly MIN_DISPLAY_INNING = 10;
+  isChoosingFirstPlayer = signal<boolean>(true);
 
   // 現在状態の取得
   get currentPlayerId(): number {
@@ -54,7 +54,7 @@ export class JpaMatch implements OnInit {
   }
   get elementStates(): { [key: string]: State } {
     let btnStates: { [key: string]: State } = {};
-    
+
     const lastAction = this.scoreSvc.currentRackActions.at(-1);
 
     // ボタンの状態制御
@@ -71,7 +71,7 @@ export class JpaMatch implements OnInit {
           btnUndo: 'ENABLE',
         };
         break;
-        // ポケット後
+      // ポケット後
       case 'POCKET':
         btnStates = {
           btnDead: 'ENABLE',
@@ -97,10 +97,7 @@ export class JpaMatch implements OnInit {
       ballStates[`ball${b}`] = this.getBallState(b);
     }
 
-    // return { ...btnStates, ...ballStates };
-    const ret = { ...btnStates, ...ballStates };
-    console.log('Element States:', ret);
-    return ret;
+    return { ...btnStates, ...ballStates };
   }
 
   private getBallState(ballNumber: number): State {
@@ -153,8 +150,14 @@ export class JpaMatch implements OnInit {
   }
 
   clickBall(ball: number) {
-    console.log(`Ball ${ball} clicked`);
     this.scoreSvc.pocket(ball);
+  }
+
+  clickFirstPlayer(playerId: 1 | 2) {
+    if (this.isChoosingFirstPlayer()) {
+      this.playerSvc.setFirstPlayer(playerId);
+      this.isChoosingFirstPlayer.set(false);
+    }
   }
 
   getScore(playerId: number): number {

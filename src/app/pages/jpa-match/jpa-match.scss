@@ -1,9 +1,13 @@
 @use "../../../styles/variables" as *;
 
-.player-board {
+.player-turn {
     padding: 0.5rem 0;
     background-color: $secondary-color;
- }
+}
+
+.selectable {
+    cursor: pointer;
+}
 
 button {
     width: 100%;

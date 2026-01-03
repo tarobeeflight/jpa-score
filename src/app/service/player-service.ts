@@ -7,8 +7,9 @@ import { Player } from '../types/player.type';
 export class PlayerService {
 
   // プレイヤー1と2の状態をSignalで管理
-  readonly player1 = signal<Player>({ id: 1, name: 'Player1', skillLevel: 1, goal: 14 });
-  readonly player2 = signal<Player>({ id: 2, name: 'Player2', skillLevel: 1, goal: 14 });
+  private readonly player1 = signal<Player>({ id: 1, name: 'プレイヤー１', skillLevel: 1, goal: 14 });
+  private readonly player2 = signal<Player>({ id: 2, name: 'プレイヤー２', skillLevel: 1, goal: 14 });
+  private readonly firstPlayerId = signal<1 | 2>(1);
 
   // スキルレベルと勝利点数の対応表
   readonly skillLevelToGaol: { [key: number]: number } = {
@@ -67,12 +68,19 @@ export class PlayerService {
     return true;
   }
 
-  // プレイヤー情報の取得
-  getPlayer(id: 1 | 2) {
-    const targetSignal = id === 1 ? this.player1 : this.player2;
-    return targetSignal;
+  setFirstPlayer(id: 1 | 2) {
+    this.firstPlayerId.set(id);
   }
 
+  getFirstPlayerId() {
+    return this.firstPlayerId();
+  }
+
+  getLastPlayerId() {
+    return this.firstPlayerId() === 1 ? 2 : 1;
+  }
+
+  // プレイヤー情報の取得
   getPlayers(): Player[] {
     return [this.player1(), this.player2()];
   }
