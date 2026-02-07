@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { PlayerService } from '../../service/player-service';
 import { ScoreService } from '../../service/score-service';
+import { ApiService } from '../../service/api-service';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -14,7 +15,12 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
   styleUrl: './jpa-match.scss',
 })
 export class JpaMatch implements OnInit {
-  constructor(private location: Location, private playerSvc: PlayerService, private scoreSvc: ScoreService) { }
+  constructor(
+    private location: Location, 
+    private playerSvc: PlayerService, 
+    private scoreSvc: ScoreService,
+    private apiSvc: ApiService,
+  ) { }
 
   players: Player[] = [];
   startTime: Date = new Date();
@@ -151,6 +157,12 @@ export class JpaMatch implements OnInit {
 
   clickBall(ball: number) {
     this.scoreSvc.pocket(ball);
+    this.apiSvc.getStatus().subscribe(status => {
+      console.log('Server Status:', status);
+    });
+    this.apiSvc.getPlayer().subscribe(data => {
+      console.log('data :', data);
+    });
   }
 
   clickFirstPlayer(playerId: 1 | 2) {
