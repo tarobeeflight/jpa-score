@@ -4,6 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ServerStatus } from '../types/server-status.type ';
 import { environment } from '../../environments/environment';
+import { Player } from '../types/player.type';
+import { Action } from '../types/action.type';
 
 @Injectable({
   providedIn: 'root'
@@ -13,11 +15,11 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
-  getStatus(): Observable<ServerStatus> {
-    return this.http.get<ServerStatus>(`${this.apiUrl}/status`);
+  resisterPlayer(player1: Player, player2: Player): Observable<ServerStatus> {
+    return this.http.post<ServerStatus>(`${this.apiUrl}/player/resister`, { player1, player2 });
   }
 
-  getPlayer(): Observable<ServerStatus> {
-    return this.http.get<ServerStatus>(`${this.apiUrl}/player`);
-  }
+  // updateActionHistory(matchId: string, gameNo: number, history: Action[]): Observable<ServerStatus> {
+  //   return this.http.post<ServerStatus>(`${this.apiUrl}/score/update`, { matchId, gameNo, history });
+  // }
 }

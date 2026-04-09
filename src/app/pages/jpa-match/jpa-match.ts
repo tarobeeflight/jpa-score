@@ -5,6 +5,9 @@ import { Player } from '../../types/player.type';
 import { PlayerService } from '../../service/player-service';
 import { ScoreService } from '../../service/score-service';
 import { ApiService } from '../../service/api-service';
+import { InningRecord } from '../../types/inning-record.type';
+import { SocketService } from '../../service/socket-service';
+import { Action } from '../../types/action.type';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -16,10 +19,11 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 })
 export class JpaMatch implements OnInit {
   constructor(
-    private location: Location, 
-    private playerSvc: PlayerService, 
+    private location: Location,
+    private playerSvc: PlayerService,
     private scoreSvc: ScoreService,
     private apiSvc: ApiService,
+    private socketSvc: SocketService,
   ) { }
 
   players: Player[] = [];
@@ -40,7 +44,7 @@ export class JpaMatch implements OnInit {
   get deadCount(): number {
     return this.scoreSvc.deadCount;
   }
-  get inningRecords() {
+  get inningRecords(): InningRecord[] {
     if (this.currentInning > this.MIN_DISPLAY_INNING) {
       return this.scoreSvc.inningRecords;
     } else {
@@ -138,31 +142,40 @@ export class JpaMatch implements OnInit {
 
   ngOnInit() {
     this.players = this.playerSvc.getPlayers();
+
+    // サーバーに試合ルームへの参加を通知
+    this.socketSvc.joinMatch('2026040601', 1);
+
+    // 他のユーザーによる更新をリアルタイムで受け取る
+    this.socketSvc.onScoreUpdate().subscribe((data: Action[]) => {
+      console.log('Score updated:', data);
+      // サーバーから受け取ったアクション履歴でローカルの状態を更新
+      this.scoreSvc.updateHistory(data);
+    });
   }
 
-  clickDead() {
+  async clickDead() {
     this.scoreSvc.dead();
+    this.socketSvc.sendScore(this.scoreSvc.allHistory);
   }
 
-  clickSafety() {
+  async clickSafety() {
     this.scoreSvc.safety();
+    this.socketSvc.sendScore(this.scoreSvc.allHistory);
   }
 
-  clickSwitch() {
+  async clickSwitch() {
     this.scoreSvc.switch();
+    this.socketSvc.sendScore(this.scoreSvc.allHistory);
   }
-  clickUndo() {
+  async clickUndo() {
     this.scoreSvc.undo();
+    this.socketSvc.sendScore(this.scoreSvc.allHistory);
   }
 
-  clickBall(ball: number) {
+  async clickBall(ball: number) {
     this.scoreSvc.pocket(ball);
-    this.apiSvc.getStatus().subscribe(status => {
-      console.log('Server Status:', status);
-    });
-    this.apiSvc.getPlayer().subscribe(data => {
-      console.log('data :', data);
-    });
+    this.socketSvc.sendScore(this.scoreSvc.allHistory);
   }
 
   clickFirstPlayer(playerId: 1 | 2) {
@@ -170,13 +183,15 @@ export class JpaMatch implements OnInit {
       this.playerSvc.setFirstPlayer(playerId);
       this.isChoosingFirstPlayer.set(false);
     }
+
+    // todo : サーバー連携
   }
 
   getScore(playerId: number): number {
     return this.scoreSvc.getScore(playerId);
   }
 
-  goBack(): void {
+  goBack() {
     this.location.back();
   }
 
@@ -190,4 +205,14 @@ export class JpaMatch implements OnInit {
   isHighlight(name: string): boolean {
     return this.elementStates[name] === 'HIGHLIGHT';
   }
+
+  // // サーバー連携
+  // private async updateActionHistory() {
+  //   const matchId = '2026040601';
+  //   const gameNo = 1;
+  //   const history = this.scoreSvc.allHistory;
+  //   await this.apiSvc.updateActionHistory(matchId, gameNo, history).subscribe(status => {
+  //     console.log('update action history : ', status);
+  //   });
+  // }
 }

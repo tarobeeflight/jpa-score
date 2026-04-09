@@ -43,21 +43,23 @@ export class PlayerService {
   }
 
   // プレイヤー情報の更新
-  updatePlayer(id: 1 | 2, data: Partial<Player>) {
+  // PlyerInfo画面で入力値の更新があるたびに呼ばれる
+  updatePlayer(id: 1 | 2, data: Partial<Player>): boolean {
     // バリデーションチェック
-    if (data.name !== undefined && !this.isValidName(data.name)) {
+    // 空文字や0もチェックメソッドに通すため、null, undefinedのみを弾く
+    if (data.name != undefined && !this.isValidName(data.name)) {
       return false;
     }
-    if (data.skillLevel !== undefined && !this.isWithinRange(data.skillLevel, 1, 9)) {
+    if (data.skillLevel != undefined && !this.isWithinRange(data.skillLevel, 1, 9)) {
       return false;
     }
-    if (data.goal !== undefined && !this.isWithinRange(data.goal, 1, 99)) {
+    if (data.goal != undefined && !this.isWithinRange(data.goal, 1, 99)) {
       return false;
     }
 
     // スキルレベルから勝利点数を設定
     let updates = { ...data };
-    if (data.skillLevel !== undefined) {
+    if (data.skillLevel) {
       updates.goal = this.skillLevelToGaol[data.skillLevel];
     }
 

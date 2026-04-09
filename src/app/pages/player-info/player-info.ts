@@ -5,6 +5,7 @@ import { Player } from '../../types/player.type';
 import { FormsModule } from '@angular/forms';
 import { PlayerService } from '../../service/player-service';
 import { Router } from '@angular/router';
+import { ApiService } from '../../service/api-service';
 
 @Component({
   selector: 'app-player-info',
@@ -13,11 +14,11 @@ import { Router } from '@angular/router';
   imports: [MatIconModule, CommonModule, FormsModule],
 })
 export class PlayerInfo {
-  constructor(private router: Router, private location: Location, private service: PlayerService) {}
+  constructor(private router: Router, private location: Location, private playerSvc: PlayerService, private apiSvc: ApiService) {}
   players: Player[] = [];
 
   ngOnInit() {
-     this.players = this.service.getPlayers();
+     this.players = this.playerSvc.getPlayers();
   }
 
   initPlayers() {
@@ -25,6 +26,12 @@ export class PlayerInfo {
   }
 
   goMatch(): void {
+    // サーバー送信
+    // todo : 試合選択画面ができたら試合特定情報も送る
+    this.apiSvc.resisterPlayer(this.players[0], this.players[1]).subscribe(status => {
+      console.log('Server Status:', status);
+    });
+    // 画面遷移
     this.router.navigate(['/jpa-match']);
   }
 

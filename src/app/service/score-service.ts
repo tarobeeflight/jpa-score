@@ -15,30 +15,34 @@ export class ScoreService {
   constructor(private playerSvc: PlayerService) { }
 
   // 状態の取得
-  get currentPlayerId() {
+  get allHistory(): Action[] {
+    return this.history();
+  }
+  get currentPlayerId(): 1 | 2 {
     const firstPlayerId = this.playerSvc.getFirstPlayerId();
     const lastPlayerId = this.playerSvc.getLastPlayerId();
     return this.history().findLast(a => a.type === 'SWITCH')?.playerId === firstPlayerId ? lastPlayerId : firstPlayerId;
   }
-  get currentInning() {
+  get currentInning(): number {
     return Math.floor(this.history().filter(a => a.type === 'SWITCH').length / 2) + 1;
   }
-  get currentRack() {
+  get currentRack(): number {
     return this.history().filter(a => a.rackEnd).length + 1;
   }
-  get deadCount() {
+  get deadCount(): number {
     return this.history().filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD').length;
   }
-  get currentRackActions() {
+  get currentRackActions(): Action[] {
     const rackNumber = this.currentRack;
     return this.history().filter(a => {
       return a.rack === rackNumber;
     });
   }
-  get currentRackDeadList() {
+  get currentRackDeadList(): Action[] {
+    // todo : 戻り値はAction[]でいいのか？球番号のリストの方がよい？
     return this.currentRackActions.filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD');
   }
-  get inningRecords() {
+  get inningRecords(): InningRecord[] {
     const records: InningRecord[] = [];
 
     // アクション履歴からイニングごとの記録を生成
@@ -113,6 +117,13 @@ export class ScoreService {
     console.log('Inning Records:', records);
     return records;
   }
+  
+    // スコア計算
+    getScore(playerId: number) {
+      return this.history()
+        .filter(a => a.playerId === playerId && a.type === 'POCKET')
+        .reduce((sum, a) => sum + (a.ballNumber === 9 ? 2 : 1), 0);
+    }
 
   // アクション追加
   private addAction(type: ActionType, ballNumber?: number) {
@@ -132,18 +143,11 @@ export class ScoreService {
     console.log('Current History:', [...this.history()]);
   }
 
-  // スコア計算
-  getScore(playerId: number) {
-    return this.history()
-      .filter(a => a.playerId === playerId && a.type === 'POCKET')
-      .reduce((sum, a) => sum + (a.ballNumber === 9 ? 2 : 1), 0);
-  }
-
   // ポケット
   pocket(ballNumber: number) {
     // ラック途中で9番をポケットした場合、残りの球を無効球として追加
     if (ballNumber === 9) {
-      for (let b = 1; b <= 8; b++) {
+      for (let b = 1; b < 9; b++) {
         const isExist = this.currentRackActions.every(a => a.ballNumber !== b);
         if (isExist) {
           this.addAction('NO_ACTION_DEAD', b);
@@ -190,5 +194,10 @@ export class ScoreService {
         break;
       }
     }
+  }
+
+  // 状態の更新（サーバーからの更新を反映）
+  updateHistory(newHistory: Action[]) {
+    this.history.set(newHistory);
   }
 }
