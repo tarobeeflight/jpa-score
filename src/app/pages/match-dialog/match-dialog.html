@@ -1,0 +1,40 @@
+<mat-dialog-content class="dialog-container">
+    <h2 mat-dialog-title>新しい試合を作成</h2>
+    <mat-form-field appearance="outline">
+        <mat-label>試合日</mat-label>
+        <input matInput type="date" [(ngModel)]="matchData.date">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+        <mat-label>試合種別</mat-label>
+        <mat-select [(ngModel)]="matchData.type" disabled>
+            <mat-option value="JPA">JPA</mat-option>
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+        <mat-label>ホームチーム</mat-label>
+        <mat-select [(ngModel)]="matchData.homeTeamId">
+            <mat-option *ngFor="let team of teams" [value]="team.id">
+                {{team.name}}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+        <mat-label>ビジターチーム</mat-label>
+        <mat-select [(ngModel)]="matchData.visitorTeamId">
+            <mat-option *ngFor="let team of teams" [value]="team.id">
+                {{team.name}}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">キャンセル</button>
+    <button mat-raised-button color="primary" (click)="onSave()"
+        [disabled]="!matchData.homeTeamId || !matchData.visitorTeamId">
+        作成
+    </button>
+</mat-dialog-actions>

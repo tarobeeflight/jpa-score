@@ -4,10 +4,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { PlayerService } from '../../service/player-service';
 import { ScoreService } from '../../service/score-service';
-import { ApiService } from '../../service/api-service';
 import { InningRecord } from '../../types/inning-record.type';
 import { SocketService } from '../../service/socket-service';
 import { Action } from '../../types/action.type';
+import { ActivatedRoute } from '@angular/router';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -18,18 +18,24 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
   styleUrl: './jpa-match.scss',
 })
 export class JpaMatch implements OnInit {
-  constructor(
-    private location: Location,
-    private playerSvc: PlayerService,
-    private scoreSvc: ScoreService,
-    private apiSvc: ApiService,
-    private socketSvc: SocketService,
-  ) { }
-
+  // 変数
   players: Player[] = [];
   startTime: Date = new Date();
   readonly MIN_DISPLAY_INNING = 10;
   isChoosingFirstPlayer = signal<boolean>(true);
+  private matchId: string = '';
+  private gameNo: number = 0;
+
+  // コンストラクタ
+  constructor(
+    private route: ActivatedRoute,
+    private location: Location,
+    private playerSvc: PlayerService,
+    private scoreSvc: ScoreService,
+    private socketSvc: SocketService,
+  ) { }
+
+  // ゲッター
 
   // 現在状態の取得
   get currentPlayerId(): number {
@@ -110,6 +116,24 @@ export class JpaMatch implements OnInit {
     return { ...btnStates, ...ballStates };
   }
 
+
+
+  ngOnInit() {
+    // ルーティングパラメータの取得
+     this.matchId = this.route.snapshot.paramMap.get('matchId') ?? '';
+     this.gameNo = Number(this.route.snapshot.paramMap.get('gameNo')) ?? 0;
+
+    this.players = this.playerSvc.getPlayers();
+
+    // 対戦ごとのsocketルームへ参加
+    this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+
+    // 他のユーザーによる更新をリアルタイムで受け取る
+    this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
+      this.scoreSvc.updateHistory(history);
+    });
+  }
+
   private getBallState(ballNumber: number): State {
     const currentActions = this.scoreSvc.currentRackActions;
     const lastAction = currentActions.at(-1);
@@ -140,42 +164,30 @@ export class JpaMatch implements OnInit {
     return 'ENABLE';
   }
 
-  ngOnInit() {
-    this.players = this.playerSvc.getPlayers();
-
-    // サーバーに試合ルームへの参加を通知
-    this.socketSvc.joinMatch('2026040601', 1);
-
-    // 他のユーザーによる更新をリアルタイムで受け取る
-    this.socketSvc.onScoreUpdate().subscribe((data: Action[]) => {
-      console.log('Score updated:', data);
-      // サーバーから受け取ったアクション履歴でローカルの状態を更新
-      this.scoreSvc.updateHistory(data);
-    });
-  }
+  
 
   async clickDead() {
     this.scoreSvc.dead();
-    this.socketSvc.sendScore(this.scoreSvc.allHistory);
+    this.sendScore();
   }
 
   async clickSafety() {
     this.scoreSvc.safety();
-    this.socketSvc.sendScore(this.scoreSvc.allHistory);
+    this.sendScore();
   }
 
   async clickSwitch() {
     this.scoreSvc.switch();
-    this.socketSvc.sendScore(this.scoreSvc.allHistory);
+    this.sendScore();
   }
   async clickUndo() {
     this.scoreSvc.undo();
-    this.socketSvc.sendScore(this.scoreSvc.allHistory);
+    this.sendScore();
   }
 
   async clickBall(ball: number) {
     this.scoreSvc.pocket(ball);
-    this.socketSvc.sendScore(this.scoreSvc.allHistory);
+    this.sendScore();
   }
 
   clickFirstPlayer(playerId: 1 | 2) {
@@ -205,14 +217,10 @@ export class JpaMatch implements OnInit {
   isHighlight(name: string): boolean {
     return this.elementStates[name] === 'HIGHLIGHT';
   }
+  
+  private sendScore() {
+    this.socketSvc.emit('update-score', { matchId: this.matchId, gameNo: this.gameNo, history: this.scoreSvc.allHistory });
+  }
 
-  // // サーバー連携
-  // private async updateActionHistory() {
-  //   const matchId = '2026040601';
-  //   const gameNo = 1;
-  //   const history = this.scoreSvc.allHistory;
-  //   await this.apiSvc.updateActionHistory(matchId, gameNo, history).subscribe(status => {
-  //     console.log('update action history : ', status);
-  //   });
-  // }
+
 }

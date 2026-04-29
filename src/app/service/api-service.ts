@@ -1,11 +1,9 @@
 // api.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { ServerStatus } from '../types/server-status.type ';
+import { map, Observable } from 'rxjs';
+import { ApiResponse } from '../types/api-response.type ';
 import { environment } from '../../environments/environment';
-import { Player } from '../types/player.type';
-import { Action } from '../types/action.type';
 
 @Injectable({
   providedIn: 'root'
@@ -13,13 +11,32 @@ import { Action } from '../types/action.type';
 export class ApiService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  resisterPlayer(player1: Player, player2: Player): Observable<ServerStatus> {
-    return this.http.post<ServerStatus>(`${this.apiUrl}/player/resister`, { player1, player2 });
+  post<T, U>(endpoint: string, data: T): Observable<U> {
+    return this.http.post<ApiResponse<U>>(`${this.apiUrl}/${endpoint}`, data).pipe(
+      map(response => {
+        console.log(`POST API [${endpoint}] Response:`, response);
+
+        if (response.status !== 'success') {
+          throw new Error(response.message || 'API Error');
+        }
+
+        return response.data as U;
+      })
+    );
   }
 
-  // updateActionHistory(matchId: string, gameNo: number, history: Action[]): Observable<ServerStatus> {
-  //   return this.http.post<ServerStatus>(`${this.apiUrl}/score/update`, { matchId, gameNo, history });
-  // }
+  get<T>(endpoint: string): Observable<T> {
+    return this.http.get<ApiResponse<T>>(`${this.apiUrl}/${endpoint}`).pipe(
+      map(response => {
+        console.log(`GET API [${endpoint}] Response:`, response);
+
+        if (response.status !== 'success') {
+          throw new Error(response.message || 'API Error');
+        }
+        return response.data as T;
+      })
+    );
+  }
 }

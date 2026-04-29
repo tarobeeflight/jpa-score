@@ -1,0 +1,78 @@
+@use "../../../styles/variables" as *;
+
+button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: none;
+}
+
+.button-text {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    color: $active-text-color;
+    text-align: center;
+    font-size: 4vw; 
+}
+
+.back-btn {
+    border: none;
+    background-color: transparent;
+    color: $active-text-color;
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+
+.team-name {
+    font-size: 2rem;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.score-display {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.match-detail-item {
+    background-color: #fcfcfc;
+
+    .player-name {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .points {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    .progress-text {
+        font-size: 0.7rem;
+        color: #666;
+    }
+}
+
+// 共通ボタン設定
+.btn-primary {
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+// アコーディオンの開閉アニメーション用（必要に応じて）
+// todo : 効いてなさそう
+.card-body {
+    transition: max-height 0.5s ease-out;
+    overflow: hidden;
+}

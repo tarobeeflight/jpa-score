@@ -1,0 +1,78 @@
+<!-- ヘッダー -->
+<header>
+    <div class="row">
+        <div class="col-4">
+            <button class="back-btn d-flex justify-content-start" (click)="goBack()">
+                <mat-icon class="me-1 py-auto">arrow_back</mat-icon>
+                <span class="align-top">戻る</span>
+            </button>
+        </div>
+        <div class="col-4 text-center">
+            <span class="title">match select</span>
+        </div>
+    </div>
+</header>
+
+<!-- ボディ -->
+<main class="container py-3">
+    <!-- 試合一覧 -->
+    <ng-container *ngFor="let match of matches()">
+        <div class="card mb-3 shadow-sm">
+            <!-- 試合情報 -->
+            <div class="card-header bg-white" (click)="toggleDetail(match.matchId)">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">{{match.startDt | date : 'yyyy/MM/dd'}}</small>
+                    <span class="badge" [ngClass]="match.winTeamKbn ? 'bg-primary' : 'bg-secondary'">
+                        {{match.winTeamKbn ? '試合終了' : '未開始'}}
+                    </span>
+                </div>
+                <div class="row text-center align-items-center">
+                    <div class="col-4 px-1">
+                        <div class="fw-bold team-name">{{match.homeTeamNm}}</div>
+                    </div>
+                    <div class="col-4 px-0">
+                        <span class="score-display">{{match.homeTeamPoint}} - {{match.visitorTeamPoint}}</span>
+                    </div>
+                    <div class="col-4 px-1">
+                        <div class="fw-bold team-name">{{match.visitorTeamNm}}</div>
+                    </div>
+                </div>
+            </div>
+            <!-- 対戦情報 -->
+            <ng-container *ngIf="openedMatchId === match.matchId">
+                <ng-container *ngFor="let game of match.gameList">
+                    <div class="card-body p-0 border-top" (click)="nextPage(match.matchId, game.gameNo)">
+                        <div class="match-detail-item p-2 border-bottom">
+                            <div class="text-muted mb-1 small text-center">第{{game.gameNo}}試合</div>
+                            <div class="row align-items-center g-1">
+                                <div class="col-5 text-end">
+                                    <div class="player-name">{{game.homePlayerNm}} (SL: {{game.homeSkillLevel}})</div>
+                                    <div class="points" [ngClass]="game.winPlayerKbn === '1' ? 'text-primary' : ''">
+                                        {{game.homePlayerPoint}}
+                                    </div>
+                                </div>
+                                <div class="col-2 text-center text-muted">vs</div>
+                                <div class="col-5 text-start">
+                                    <div class="player-name">{{game.visitorPlayerNm}} (SL: {{game.visitorSkillLevel}})</div>
+                                    <div class="points" [ngClass]="game.winPlayerKbn === '2' ? 'text-primary' : ''">
+                                        {{game.visitorPlayerPoint}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
+            </ng-container>
+        </div>
+    </ng-container>
+
+    <!-- 新規作成 -->
+    <div class="row mt-4 mb-5">
+        <div class="col-12">
+            <button class="btn btn-primary w-100 py-3 shadow" (click)="openMatchDialog()">
+                <mat-icon class="align-middle">add_circle</mat-icon>
+                <span class="ms-2 fw-bold">新しい試合を作成</span>
+            </button>
+        </div>
+    </div>
+</main>

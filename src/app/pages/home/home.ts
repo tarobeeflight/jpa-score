@@ -10,9 +10,8 @@ import { Router } from '@angular/router';
 export class Home {
   constructor(private router: Router) {}
 
-  startNewGame() {
-    // todo : スコアサービス、プレイヤーサービスを初期化する？（サービスにリセットメソッドを用意）
-    this.router.navigate(['/player-info']);
+  goMatchSelect() {
+    this.router.navigate(['/match-select']);
   }
 
 }

@@ -3,7 +3,25 @@
 @use "styles/variables" as *;
 @use "bootstrap/scss/bootstrap";
 
+// -------------------------よくわからんままgeminiに言われて書いてるソース--------------------------
+// 試合作成ダイアログで使っているcssを読み込むための記述
 
+// 1. コアスタイルを読み込む（必須）
+@include mat.core();
+// 2. シンプルなテーマ定義
+// 最新版では個別のパレット変数（$indigo-palette）を参照せず、
+// define-theme に直接色を指定する形式が推奨されています。
+$my-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette, // indigoに近い標準パレット名
+    tertiary: mat.$blue-palette,
+  )
+));
+// 3. テーマを適用する
+// これにより mat-select の背景色や影が生成されます
+@include mat.all-component-themes($my-theme);
+// --------------------------------------------------------------------------------------------
 
 html {
     margin: 0;
@@ -25,7 +43,7 @@ header {
 }
 
 header .title {
-    font-size: 2rem;
+    font-size: 1rem;
 }
 
 
