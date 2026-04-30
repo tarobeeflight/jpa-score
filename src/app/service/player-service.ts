@@ -5,86 +5,65 @@ import { Player } from '../types/player.type';
   providedIn: 'root'
 })
 export class PlayerService {
+  // private readonly firstPlayerId = signal<1 | 2>(1);
 
-  // プレイヤー1と2の状態をSignalで管理
-  private readonly player1 = signal<Player>({ id: 1, name: 'プレイヤー１', skillLevel: 1, goal: 14 });
-  private readonly player2 = signal<Player>({ id: 2, name: 'プレイヤー２', skillLevel: 1, goal: 14 });
-  private readonly firstPlayerId = signal<1 | 2>(1);
+  // todo : フォームバリデーションを使用するので不要になったが、サーバー側に移行して使えそう
 
-  // スキルレベルと勝利点数の対応表
-  readonly skillLevelToGaol: { [key: number]: number } = {
-    1: 14,
-    2: 19,
-    3: 25,
-    4: 31,
-    5: 38,
-    6: 46,
-    7: 55,
-    8: 65,
-    9: 75,
-  }
+  // // プレイヤー名のバリデーション
+  // private isValidName(name: string): boolean {
+  //   // 文字数チェック
+  //   if (name.length < 1 || name.length > 50) {
+  //     return false;
+  //   }
 
-  // プレイヤー名のバリデーション
-  private isValidName(name: string): boolean {
-    // 文字数チェック
-    if (name.length < 1 || name.length > 30) {
-      return false;
-    }
+  //   // 正規表現: 半角英数、半角スペース、全角文字を許可
+  //   // [^\x00-\x1f\x7f] は制御文字以外のほぼ全ての文字を許可する全角対応パターン
+  //   const nameRegex = /^[a-zA-Z0-9\s\u3000-\u30FF\u4E00-\u9FFF\u3040-\u309Fー]+$/;
+  //   return nameRegex.test(name);
+  // }
 
-    // 正規表現: 半角英数、半角スペース、全角文字を許可
-    // [^\x00-\x1f\x7f] は制御文字以外のほぼ全ての文字を許可する全角対応パターン
-    const nameRegex = /^[a-zA-Z0-9\s\u3000-\u30FF\u4E00-\u9FFF\u3040-\u309Fー]+$/;
-    return nameRegex.test(name);
-  }
+  // // 数値範囲のバリデーション
+  // private isWithinRange(value: number, min: number, max: number): boolean {
+  //   return value >= min && value <= max;
+  // }
 
-  // 数値範囲のバリデーション
-  private isWithinRange(value: number, min: number, max: number): boolean {
-    return value >= min && value <= max;
-  }
+  // // プレイヤー情報のバリデーションチェック
+  // // PlyerInfo画面で入力値の更新があるたびに呼ばれる
+  // validatePlayer(player: Player): boolean {
+  //   // バリデーションチェック
+  //   // 空文字や0もチェックメソッドに通すため、null, undefinedのみを弾く
+  //   if (!player.name || !this.isValidName(player.name)) {
+  //     return false;
+  //   }
+  //   if (!player.skillLevel || !this.isWithinRange(player.skillLevel, 1, 9)) {
+  //     return false;
+  //   }
+  //   if (!player.goal || !this.isWithinRange(player.goal, 1, 99)) {
+  //     return false;
+  //   }
 
-  // プレイヤー情報の更新
-  // PlyerInfo画面で入力値の更新があるたびに呼ばれる
-  updatePlayer(id: 1 | 2, data: Partial<Player>): boolean {
-    // バリデーションチェック
-    // 空文字や0もチェックメソッドに通すため、null, undefinedのみを弾く
-    if (data.name != undefined && !this.isValidName(data.name)) {
-      return false;
-    }
-    if (data.skillLevel != undefined && !this.isWithinRange(data.skillLevel, 1, 9)) {
-      return false;
-    }
-    if (data.goal != undefined && !this.isWithinRange(data.goal, 1, 99)) {
-      return false;
-    }
+  //   return true;
+  // }
 
-    // スキルレベルから勝利点数を設定
-    let updates = { ...data };
-    if (data.skillLevel) {
-      updates.goal = this.skillLevelToGaol[data.skillLevel];
-    }
-
-    // 更新
-    const targetSignal = id === 1 ? this.player1 : this.player2;
-    targetSignal.update(p => ({ ...p, ...updates }));
-
-    return true;
-  }
-
+  // 対戦画面のための暫定対応
   setFirstPlayer(id: 1 | 2) {
-    this.firstPlayerId.set(id);
+    // this.firstPlayerId.set(id);
   }
 
-  getFirstPlayerId() {
-    return this.firstPlayerId();
+  getFirstPlayerId(): 1 | 2 {
+    // return this.firstPlayerId();
+    return 1; // todo : 仮実装
   }
 
-  getLastPlayerId() {
-    return this.firstPlayerId() === 1 ? 2 : 1;
+  getLastPlayerId(): 1 | 2 {
+    // return this.firstPlayerId() === 1 ? 2 : 1;
+    return 2; // todo : 仮実装
   }
 
   // プレイヤー情報の取得
   getPlayers(): Player[] {
-    return [this.player1(), this.player2()];
+    // return [this.player1(), this.player2()];
+    return []; // todo : 仮実装
   }
 }
 

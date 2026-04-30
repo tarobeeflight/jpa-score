@@ -15,4 +15,5 @@ export type Match = {
     visitorTeamPoint: number | null;
     winTeamKbn: string | null;
     gameList: Game[];
+    revision: number;
 }

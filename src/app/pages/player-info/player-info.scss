@@ -56,7 +56,7 @@
   appearance: none;
   width: 30px;
   height: 30px;
-  background: url('../../../assets/images/ball/ball_5.svg') no-repeat center center;
+  background: var(--thumb-image, url('../../../assets/images/ball/ball_1.svg')) no-repeat center center;
   background-size: contain;
   cursor: pointer;
   transform: translateY(-50%);
