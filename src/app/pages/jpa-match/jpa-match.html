@@ -10,7 +10,7 @@
             <span class="title">JPR match!</span>
         </div>
         <div class="col-4 fs-6 text-end">
-            <span>開始時刻 {{startTime | date : 'hh:mm'}}</span>
+            <span>開始時刻 {{startDt | date : 'hh:mm'}}</span>
         </div>
     </div>
 </header>
@@ -19,14 +19,14 @@
     <!-- プレイヤー情報 -->
     <div class="row mb-2">
         <ng-container *ngFor="let player of players">
-            <div class="col-6" (click)="clickFirstPlayer(player.id)"
-                [ngClass]="{'player-turn': isChoosingFirstPlayer() || player.id === currentPlayerId, 'selectable': isChoosingFirstPlayer()}">
+            <div class="col-6" (click)="clickFirstPlayer(player.homeKbn)"
+                [ngClass]="{'player-turn': isChoosingFirstPlayer() || player.homeKbn === currentPlayerKbn, 'selectable': isChoosingFirstPlayer()}">
                 <div class="fs-3 mb-1 text-center">{{player.name}}</div>
                 <div class="d-flex justify-content-center px-2 mb-4 fs-5">
                     <div class="me-3">SL: {{player.skillLevel}}</div>
                     <div>Goal: {{player.goal}}</div>
                 </div>
-                <div class="text-center fs-1">{{getScore(player.id)}}</div>
+                <div class="text-center fs-1">{{getScore(player.homeKbn)}}</div>
             </div>
         </ng-container>
     </div>
@@ -41,27 +41,27 @@
     <div class="py-2 px-4 border-top border-bottom border-3 mb-2">
         <ng-container *ngFor="let inningRecord of inningRecords; let i = index">
             <div class="row fs-5 border-bottom " style="min-height: 1.5rem;">
-                <!-- プレイヤー１ -->
+                <!-- ホームプレイヤー -->
                 <div class="col-5">
-                    <ng-container *ngIf="inningRecord.isBreakPlayer1">Break</ng-container>
-                    <ng-container *ngFor="let ball of inningRecord.player1Pockets">
+                    <ng-container *ngIf="inningRecord.isHomePlayerBreak">Break</ng-container>
+                    <ng-container *ngFor="let ball of inningRecord.homePlayerPockets">
 
                         <img class="pockets" src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
                     </ng-container>
-                    <ng-container *ngIf="inningRecord.isSafetyPlayer1">S</ng-container>
+                    <ng-container *ngIf="inningRecord.isHomePlayerSafety">S</ng-container>
                 </div>
                 <!-- イニング数 -->
                 <div class="col-2 text-center">
                     <ng-container *ngIf="inningRecord.inning === currentInning">*</ng-container>
                     <ng-container *ngIf="inningRecord.inning !== 0">{{inningRecord.inning}}</ng-container>
                 </div>
-                <!-- プレイヤー２ -->
+                <!-- ビジタープレイヤー -->
                 <div class="col-5">
-                    <ng-container *ngIf="inningRecord.isBreakPlayer2">Break</ng-container>
-                    <ng-container *ngFor="let ball of inningRecord.player2Pockets">
+                    <ng-container *ngIf="inningRecord.isVisitorPlayerBreak">Break</ng-container>
+                    <ng-container *ngFor="let ball of inningRecord.visitorPlayerPockets">
                         <img class="pockets" src="assets/images/ball/ball_{{ball}}.svg" alt="球{{ball}}">
                     </ng-container>
-                    <ng-container *ngIf="inningRecord.isSafetyPlayer2">S</ng-container>
+                    <ng-container *ngIf="inningRecord.isVisitorPlayerSafety">S</ng-container>
                 </div>
             </div>
         </ng-container>

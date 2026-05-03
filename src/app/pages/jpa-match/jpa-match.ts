@@ -1,13 +1,17 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, signal, Signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
-import { PlayerService } from '../../service/player-service';
-import { ScoreService } from '../../service/score-service';
 import { InningRecord } from '../../types/inning-record.type';
 import { SocketService } from '../../service/socket-service';
-import { Action } from '../../types/action.type';
-import { ActivatedRoute } from '@angular/router';
+import { Action, ActionType } from '../../types/action.type';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Game } from '../../types/game.type';
+import { ApiService } from '../../service/api-service';
+import { JpaMatchInitResponse } from '../../types/responses/jpa-match-init.http.response';
+import { GameStatus, HomeKbn } from '../../constants';
+import { UpdateFirstPlayerResponse } from '../../types/responses/update-first-player.http.response';
+import { UpdateFirstPlayerRequest } from '../../types/requests/update-first-player.http.request';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -18,60 +22,144 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
   styleUrl: './jpa-match.scss',
 })
 export class JpaMatch implements OnInit {
-  // 変数
-  players: Player[] = [];
-  startTime: Date = new Date();
+  // 定数
   readonly MIN_DISPLAY_INNING = 10;
+
+  // 変数
+  private matchId!: string;
+  private gameNo!: number;
+  players!: Player[];
+  private game!: Game;
+  private history = signal<Action[]>([]);
   isChoosingFirstPlayer = signal<boolean>(true);
-  private matchId: string = '';
-  private gameNo: number = 0;
 
   // コンストラクタ
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private location: Location,
-    private playerSvc: PlayerService,
-    private scoreSvc: ScoreService,
     private socketSvc: SocketService,
+    private apiSvc: ApiService,
   ) { }
 
-  // ゲッター
-
+  // -----------------------------------------
+  // GETTER
+  // -----------------------------------------
+  get startDt(): Date {
+    return this.game?.startDt;
+  }
   // 現在状態の取得
-  get currentPlayerId(): number {
-    return this.scoreSvc.currentPlayerId;
+  get lastAction(): Action | undefined {
+    return this.history().at(-1);
+  }
+  get currentPlayerKbn(): HomeKbn {
+    return this.history().findLast(a => a.type === 'SWITCH')?.playerKbn === HomeKbn.HOME ? HomeKbn.VISITOR : HomeKbn.HOME;
   }
   get currentInning(): number {
-    return this.scoreSvc.currentInning;
+    return Math.floor(this.history().filter(a => a.type === 'SWITCH').length / 2) + 1;
   }
   get currentRack(): number {
-    return this.scoreSvc.currentRack;
+    return this.history().filter(a => a.rackEnd).length + 1;
   }
   get deadCount(): number {
-    return this.scoreSvc.deadCount;
+    return this.history().filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD').length;
   }
   get inningRecords(): InningRecord[] {
     if (this.currentInning > this.MIN_DISPLAY_INNING) {
-      return this.scoreSvc.inningRecords;
+      return this.getInningRecords();
     } else {
       const emptyInnings = Array.from({ length: this.MIN_DISPLAY_INNING - this.currentInning }, (_, i) => {
         return {
           inning: 0,
-          player1Pockets: [],
-          player2Pockets: [],
-          isSafetyPlayer1: false,
-          isSafetyPlayer2: false,
-          isBreakPlayer1: false,
-          isBreakPlayer2: false,
+          homePlayerPockets: [],
+          visitorPlayerPockets: [],
+          isHomePlayerSafety: false,
+          isVisitorPlayerSafety: false,
+          isHomePlayerBreak: false,
+          isVisitorPlayerBreak: false,
         }
       });
-      return [...this.scoreSvc.inningRecords, ...emptyInnings];
+      return [...this.getInningRecords(), ...emptyInnings];
     }
   }
-  get elementStates(): { [key: string]: State } {
+  getInningRecords(): InningRecord[] {
+    const records: InningRecord[] = [];
+
+    // アクション履歴からイニングごとの記録を生成
+    this.history().forEach(a => {
+      if (!records.find(r => r.inning === a.inning)) {
+        // イニングを新規作成
+        const record: InningRecord = {
+          inning: a.inning,
+          homePlayerPockets: [],
+          visitorPlayerPockets: [],
+          isHomePlayerSafety: false,
+          isVisitorPlayerSafety: false,
+          isHomePlayerBreak: false,
+          isVisitorPlayerBreak: false,
+        };
+        records.push(record);
+      }
+
+      const record = records.find(r => r.inning === a.inning);
+
+      switch (a.type) {
+        case 'POCKET':
+          // ポケットリストの追加
+          if (a.playerKbn === HomeKbn.HOME) {
+            record!.homePlayerPockets.push(a.ballNumber!);
+          } else {
+            record!.visitorPlayerPockets.push(a.ballNumber!);
+          }
+          // 9番をポケットした場合、ポケットしたプレイヤーのブレークフラグを立てる
+          if (a.rackEnd) {
+            if (a.playerKbn === HomeKbn.HOME) {
+              record!.isHomePlayerBreak = true;
+            } else {
+              record!.isVisitorPlayerBreak = true;
+            }
+          }
+          // 1イニング目は先攻プレイヤーのブレークフラグを立てる
+          if (a.inning === 1 && a.playerKbn === this.game.firstPlayerKbn) {
+            if (a.playerKbn === HomeKbn.HOME) {
+              record!.isHomePlayerBreak = true;
+            } else {
+              record!.isVisitorPlayerBreak = true;
+            }
+          }
+          break;
+        case 'SAFETY':
+          // セーフティの設定
+          if (a.playerKbn === HomeKbn.HOME) {
+            record!.isHomePlayerSafety = true;
+          } else {
+            record!.isVisitorPlayerSafety = true;
+          }
+          break;
+      }
+    });
+
+    // アクション履歴の最後が後攻プレイヤーのスイッチの場合、空のイニングを追加
+    if (!this.lastAction || (this.lastAction.type === 'SWITCH' && this.lastAction.playerKbn !== this.game.firstPlayerKbn)) {
+      records.push({
+        inning: this.currentInning,
+        homePlayerPockets: [],
+        visitorPlayerPockets: [],
+        isHomePlayerSafety: false,
+        isVisitorPlayerSafety: false,
+        isHomePlayerBreak: this.currentInning === 1 && this.game?.firstPlayerKbn === HomeKbn.HOME,
+        isVisitorPlayerBreak: this.currentInning === 1 && this.game?.firstPlayerKbn === HomeKbn.VISITOR,
+      });
+    }
+
+    // todo : テスト
+    console.log('Inning Records:', records);
+    return records;
+  }
+  get componentStates(): { [key: string]: State } {
     let btnStates: { [key: string]: State } = {};
 
-    const lastAction = this.scoreSvc.currentRackActions.at(-1);
+    const lastAction = this.currentRackActions.at(-1); // this.history().atではあかんの？
 
     // ボタンの状態制御
     switch (lastAction?.type) {
@@ -115,28 +203,84 @@ export class JpaMatch implements OnInit {
 
     return { ...btnStates, ...ballStates };
   }
+  get currentRackActions(): Action[] {
+    return this.history().filter(a => {
+      return a.rack === this.currentRack;
+    });
+  }
 
 
 
   ngOnInit() {
     // ルーティングパラメータの取得
-     this.matchId = this.route.snapshot.paramMap.get('matchId') ?? '';
-     this.gameNo = Number(this.route.snapshot.paramMap.get('gameNo')) ?? 0;
+    this.matchId = this.route.snapshot.paramMap.get('matchId') ?? '';
+    this.gameNo = Number(this.route.snapshot.paramMap.get('gameNo')) ?? 0;
 
-    this.players = this.playerSvc.getPlayers();
+    // 対戦情報・アクション履歴の取得
+    this.apiSvc.get<JpaMatchInitResponse>(`jpa-match/init/${this.matchId}/${this.gameNo}`).subscribe({
+      next: (res) => {
+        const { game, history } = res;
 
-    // 対戦ごとのsocketルームへ参加
-    this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+        if (!game) {
+          // 対戦が存在しない場合、試合選択画面に遷移
+          alert('該当の試合が存在しないため、試合一覧画面に遷移します。');
+          this.router.navigate(['/match-select']);
+        } else if (game.gameStatus === GameStatus.CREATED || game.gameStatus === GameStatus.FINISHED) {
+          // 対戦ステータスが作成済の場合、プレイヤー入力画面に遷移
+          alert('該当の試合はプレイヤー情報が未入力のため、プレイヤー入力画面に遷移します。');
+          this.router.navigate(['/player-info', this.matchId, this.gameNo]);
+        } else {
+          // 対戦ステータスがプレイヤー登録済みまたは終了の場合
 
-    // 他のユーザーによる更新をリアルタイムで受け取る
-    this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
-      this.scoreSvc.updateHistory(history);
+          // 試合情報・アクション履歴を保持する
+          this.game = {
+            ...game,
+            // todo : httpで文字列になったDateの変換。一括で対応する。
+            startDt: new Date(game.startDt),
+          };
+          this.history.set(history);
+          // 先攻選択中フラグを設定する
+          this.isChoosingFirstPlayer.set(!game.firstPlayerKbn);
+          // プレイヤーリストを作成する
+          const homePlayer: Player = {
+            homeKbn: HomeKbn.HOME,
+            isFirst: game?.firstPlayerKbn === HomeKbn.HOME,
+            playerId: game.homePlayerId,
+            jpaPlayerId: game.homeJpaPlayerNo,
+            name: game.homePlayerNm,
+            skillLevel: game.homeSkillLevel,
+            goal: game.homeGoal,
+          };
+          const visitorPlayer: Player = {
+            homeKbn: HomeKbn.VISITOR,
+            isFirst: game?.firstPlayerKbn === HomeKbn.VISITOR,
+            playerId: game.visitorPlayerId,
+            jpaPlayerId: game.visitorJpaPlayerNo,
+            name: game.visitorPlayerNm,
+            skillLevel: game.visitorSkillLevel,
+            goal: game.visitorGoal,
+          };
+          this.players = [homePlayer, visitorPlayer];
+          
+          // サブスクリプションの開始
+          if (!this.isChoosingFirstPlayer()) {
+            // 対戦ごとのsocketルームへ参加
+            this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+        
+            // アクション履歴の更新を購読する
+            this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
+              this.history.set(history);
+            });
+          }
+        }
+      }
     });
+
   }
 
   private getBallState(ballNumber: number): State {
-    const currentActions = this.scoreSvc.currentRackActions;
-    const lastAction = currentActions.at(-1);
+    const currentActions = this.currentRackActions;
+    const lastAction = currentActions.at(-1); // history().atじゃあかんの？
 
     // 最新アクションがポケットの場合、その球をハイライト
     if (lastAction && lastAction.type === 'POCKET' && lastAction.ballNumber === ballNumber) {
@@ -149,7 +293,7 @@ export class JpaMatch implements OnInit {
       return 'HIDDEN';
     }
 
-    // 最新アクションがセーフティの場合、全球非活性
+    // 最新アクションがセーフティの場合、全球非活性 // todo : この順番でちゃんと判定される？
     if (lastAction && lastAction.type === 'SAFETY') {
       return 'DISABLE';
     }
@@ -163,44 +307,144 @@ export class JpaMatch implements OnInit {
     // 上記以外は活性
     return 'ENABLE';
   }
+  private addAction(type: ActionType, ballNumber?: number) {
+    const newAction: Action = {
+      actionId: this.history().length + 1,
+      playerKbn: this.currentPlayerKbn,
+      rack: this.currentRack,
+      inning: this.currentInning,
+      type,
+      ballNumber,
+      rackEnd: type === 'POCKET' && ballNumber === 9
+    };
 
-  
+    this.history.update(prev => [...prev, newAction]);
+
+    // todo : テスト
+    console.log('Current History:', [...this.history()]);
+  }
+
+  // ポケット
+  pocket(ballNumber: number) {
+    // ラック途中で9番をポケットした場合、残りの球を無効球として追加
+    if (ballNumber === 9) {
+      for (let b = 1; b < 9; b++) {
+        const isExist = this.currentRackActions.every(a => a.ballNumber !== b);
+        if (isExist) {
+          this.addAction('NO_ACTION_DEAD', b);
+        }
+      }
+    }
+    this.addAction('POCKET', ballNumber);
+  }
+
+  // デッド
+  dead() {
+    const lastAction = this.history().at(-1);
+    if (!lastAction || lastAction.type !== 'POCKET') {
+      throw new Error('デッド直前のアクションがPOCKETではありません。');
+    }
+    this.history.update(prev => prev.slice(0, -1));
+    this.addAction('DEAD', lastAction.ballNumber);
+  }
+
+  // セーフティ
+  safety() {
+    this.addAction('SAFETY');
+  }
+
+  // スイッチ
+  switch() {
+    this.addAction('SWITCH');
+  }
+
+  // アンドゥ
+  undo() {
+    if (this.history().length === 0) {
+      return;
+    }
+
+    // ノーアクション無効球はまとめて削除
+    while (true) {
+      this.history.update(prev => prev.slice(0, -1));
+      const lastAction = this.history().at(-1);
+      if (!lastAction) {
+        return;
+      }
+      if (lastAction.type !== 'NO_ACTION_DEAD') {
+        break;
+      }
+    }
+  }
+
+
 
   async clickDead() {
-    this.scoreSvc.dead();
+    this.dead();
     this.sendScore();
   }
 
   async clickSafety() {
-    this.scoreSvc.safety();
+    this.safety();
     this.sendScore();
   }
 
   async clickSwitch() {
-    this.scoreSvc.switch();
+    this.switch();
     this.sendScore();
   }
   async clickUndo() {
-    this.scoreSvc.undo();
+    this.undo();
     this.sendScore();
   }
 
   async clickBall(ball: number) {
-    this.scoreSvc.pocket(ball);
+    if (this.isHighlight(`ball${ball}`)) {
+      // todo : コンポーネントで、ハイライト球も非活性にしたいが、なぜかならないので一旦こちらで制御。
+      return;
+    }
+
+    this.pocket(ball);
     this.sendScore();
   }
 
-  clickFirstPlayer(playerId: 1 | 2) {
-    if (this.isChoosingFirstPlayer()) {
-      this.playerSvc.setFirstPlayer(playerId);
-      this.isChoosingFirstPlayer.set(false);
+  async clickFirstPlayer(playerKbn: HomeKbn) {
+    if (!this.isChoosingFirstPlayer()) {
+      // 先攻選択済みなら、何もしない
+      return;
     }
+    // DBの先攻区分を更新
+    const data: UpdateFirstPlayerRequest = {
+      matchId: this.matchId,
+      gameNo: this.gameNo,
+      firstPlayerKbn: playerKbn,
+      revision: this.game.revision,
+    };
+    await this.apiSvc.post<UpdateFirstPlayerRequest, UpdateFirstPlayerResponse>(`game/update/first-player`, data).subscribe({
+      next: (res) => {
+        if (res.isHaita) {
+          alert('他のユーザによって先攻プレイヤーが入力されているため、入力情報を保存できませんでした。');
+        }
+        this.game.firstPlayerKbn = res.firstPlayerKbn;
+      }
+    });
 
-    // todo : サーバー連携
+    // 選択中フラグを更新
+    this.isChoosingFirstPlayer.set(false);
+
+    // 対戦ごとのsocketルームへ参加
+    this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+
+    // アクション履歴の更新を購読する
+    this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
+      this.history.set(history);
+    });
   }
 
-  getScore(playerId: number): number {
-    return this.scoreSvc.getScore(playerId);
+  getScore(playerKbn: HomeKbn) {
+    return this.history()
+      .filter(a => a.playerKbn === playerKbn && a.type === 'POCKET')
+      .reduce((sum, a) => sum + (a.ballNumber === 9 ? 2 : 1), 0);
   }
 
   goBack() {
@@ -209,17 +453,23 @@ export class JpaMatch implements OnInit {
 
   // 状態制御
   isDisabled(name: string): boolean {
-    return this.elementStates[name] === 'DISABLE';
+    return this.componentStates[name] === 'DISABLE';
   }
   isHidden(name: string): boolean {
-    return this.elementStates[name] === 'HIDDEN';
+    return this.componentStates[name] === 'HIDDEN';
   }
   isHighlight(name: string): boolean {
-    return this.elementStates[name] === 'HIGHLIGHT';
+    return this.componentStates[name] === 'HIGHLIGHT';
   }
-  
+
   private sendScore() {
-    this.socketSvc.emit('update-score', { matchId: this.matchId, gameNo: this.gameNo, history: this.scoreSvc.allHistory });
+    this.socketSvc.emit('update-score', { matchId: this.matchId, gameNo: this.gameNo, history: this.history() });
+  }
+
+  // todo : どこにも使ってないが不要？
+  get currentRackDeadList(): Action[] {
+    // todo : 戻り値はAction[]でいいのか？球番号のリストの方がよい？
+    return this.currentRackActions.filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD');
   }
 
 

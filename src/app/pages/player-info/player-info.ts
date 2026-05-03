@@ -19,8 +19,8 @@ import { GameUpdatePlayerRequest } from '../../types/requests/game-update-player
 export class PlayerInfo {
   // 変数
   // todo : 暫定対応でidを用意している
-  homePlayer = signal<Player>({ homeKbn: HomeKbn.HOME, isFirst: undefined, name: 'ホームプレイヤー', skillLevel: 1, goal: 14, id: 1 });
-  visitorPlayer = signal<Player>({ homeKbn: HomeKbn.VISITOR, isFirst: undefined, name: 'ビジタープレイヤー', skillLevel: 1, goal: 14, id: 2 });
+  homePlayer = signal<Player>({ homeKbn: HomeKbn.HOME, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ホームプレイヤー', skillLevel: 1, goal: 14});
+  visitorPlayer = signal<Player>({ homeKbn: HomeKbn.VISITOR, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ビジタープレイヤー', skillLevel: 1, goal: 14});
   matchId: string = '';
   gameNo: number = 0;
   revision: number = 0;
@@ -49,11 +49,11 @@ export class PlayerInfo {
 
         if (!game) {
           // 対戦が存在しない場合、試合選択画面に遷移
-          // todo : ダイアログでお知らせした方が親切
+          alert('該当の試合が存在しないため、試合一覧画面に遷移します。');
           this.router.navigate(['/match-select']);
         } else if (game.gameStatus === GameStatus.PLAYER_REGISTERED || game.gameStatus === GameStatus.FINISHED) {
           // 対戦ステータスがプレイヤー登録済みまたは終了の場合、対戦画面に遷移
-          // todo : ダイアログでお知らせした方が親切
+          alert('該当の試合はプレイヤー情報が入力済みのため、試合画面に遷移します。');
           this.router.navigate(['/jpa-match', this.matchId, this.gameNo]);
         } else {
           // 対戦ステータスが作成済の場合、リビジョン・SK目標点数マップを保持する
@@ -91,6 +91,7 @@ export class PlayerInfo {
     const req: GameUpdatePlayerRequest = {
       matchId: this.matchId,
       gameNo: this.gameNo,
+      startDt: new Date(),
       homePlayer: this.homePlayer(),
       visitorPlayer: this.visitorPlayer(),
       revision: this.revision
@@ -99,7 +100,7 @@ export class PlayerInfo {
     this.apiSvc.post<GameUpdatePlayerRequest, boolean>('game/update/player', req).subscribe(isHaita => {
       if (isHaita) {
         // 排他エラーの場合、アラート表示後に対戦画面に遷移
-        alert('他のユーザによってプレイヤー情報が入力されているため、試合画面に遷移します');
+        alert('他のユーザによってプレイヤー情報が入力されているため、入力情報を保存できませんでした。試合画面に遷移します。');
         this.router.navigate(['/jpa-match', this.matchId, this.gameNo]);
       } else {
         // 対戦画面に遷移

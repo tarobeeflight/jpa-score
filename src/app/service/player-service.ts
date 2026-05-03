@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Player } from '../types/player.type';
 
 @Injectable({
@@ -45,26 +45,26 @@ export class PlayerService {
   //   return true;
   // }
 
-  // 対戦画面のための暫定対応
-  setFirstPlayer(id: 1 | 2) {
-    // this.firstPlayerId.set(id);
-  }
+  // // 対戦画面のための暫定対応
+  // setFirstPlayer(id: 1 | 2) {
+  //   // this.firstPlayerId.set(id);
+  // }
 
-  getFirstPlayerId(): 1 | 2 {
-    // return this.firstPlayerId();
-    return 1; // todo : 仮実装
-  }
+  // getFirstPlayerId(): 1 | 2 {
+  //   // return this.firstPlayerId();
+  //   return 1; // todo : 仮実装
+  // }
 
-  getLastPlayerId(): 1 | 2 {
-    // return this.firstPlayerId() === 1 ? 2 : 1;
-    return 2; // todo : 仮実装
-  }
+  // getLastPlayerId(): 1 | 2 {
+  //   // return this.firstPlayerId() === 1 ? 2 : 1;
+  //   return 2; // todo : 仮実装
+  // }
 
-  // プレイヤー情報の取得
-  getPlayers(): Player[] {
-    // return [this.player1(), this.player2()];
-    return []; // todo : 仮実装
-  }
+  // // プレイヤー情報の取得
+  // getPlayers(): Player[] {
+  //   // return [this.player1(), this.player2()];
+  //   return []; // todo : 仮実装
+  // }
 }
 
 

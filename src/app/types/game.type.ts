@@ -1,7 +1,9 @@
+import { GameStatus, HomeKbn } from "../constants";
+
 export type Game = {
     matchId: string;
     gameNo: number;
-    gameStatus: string;
+    gameStatus: GameStatus;
     makeMatchDay: Date | null;
     startDt: Date;
     endDt: Date;
@@ -19,8 +21,8 @@ export type Game = {
     visitorPlayerPoint: number;
     homeGamePoint: number | null;
     visitorGamePoint: number | null;
-    winPlayerKbn: string;
-    firstPlayerKbn: string;
+    winPlayerKbn: HomeKbn;
+    firstPlayerKbn: HomeKbn;
     inning: number;
     revision: number;
 }
