@@ -31,7 +31,8 @@
                         <div class="fw-bold team-name">{{match.homeTeamNm}}</div>
                     </div>
                     <div class="col-4 px-0">
-                        <span class="score-display">{{match.homeTeamPoint}} - {{match.visitorTeamPoint}}</span>
+                        <!-- todo : とりあえずのチーム点数の算出 -->
+                        <span class="score-display">{{calcTeamPoint(match, HomeKbn.HOME)}} - {{calcTeamPoint(match, HomeKbn.VISITOR)}}</span>
                     </div>
                     <div class="col-4 px-1">
                         <div class="fw-bold team-name">{{match.visitorTeamNm}}</div>
@@ -44,18 +45,25 @@
                     <div class="card-body p-0 border-top" (click)="nextPage(match.matchId, game.gameNo)">
                         <div class="match-detail-item p-2 border-bottom">
                             <div class="text-muted mb-1 small text-center">第{{game.gameNo}}試合</div>
+                            <div class="text-muted mb-1 small text-center">{{game.inning}}イニング</div>
                             <div class="row align-items-center g-1">
                                 <div class="col-5 text-end">
                                     <div class="player-name">{{game.homePlayerNm}} (SL: {{game.homeSkillLevel}})</div>
-                                    <div class="points" [ngClass]="game.winPlayerKbn === '1' ? 'text-primary' : ''">
+                                    <div class="points" [ngClass]="game.winPlayerKbn === HomeKbn.HOME ? 'text-primary' : ''">
                                         {{game.homePlayerPoint}}
+                                    </div>
+                                    <div class="points" [ngClass]="game.winPlayerKbn === HomeKbn.HOME ? 'text-primary' : ''">
+                                        {{game.homeGamePoint}}
                                     </div>
                                 </div>
                                 <div class="col-2 text-center text-muted">vs</div>
                                 <div class="col-5 text-start">
                                     <div class="player-name">{{game.visitorPlayerNm}} (SL: {{game.visitorSkillLevel}})</div>
-                                    <div class="points" [ngClass]="game.winPlayerKbn === '2' ? 'text-primary' : ''">
+                                    <div class="points" [ngClass]="game.winPlayerKbn === HomeKbn.VISITOR ? 'text-primary' : ''">
                                         {{game.visitorPlayerPoint}}
+                                    </div>
+                                    <div class="points" [ngClass]="game.winPlayerKbn === HomeKbn.VISITOR ? 'text-primary' : ''">
+                                        {{game.visitorGamePoint}}
                                     </div>
                                 </div>
                             </div>

@@ -1,3 +1,4 @@
 import type { Action } from "../action.type.js";
+import { Game } from "../game.type.js";
 
-export type UpdateScoreSocketRequest = { matchId: string, gameNo: number, history: Action[] }
+export type UpdateScoreSocketRequest = { game: Game, history: Action[] }

@@ -12,6 +12,7 @@ import { JpaMatchInitResponse } from '../../types/responses/jpa-match-init.http.
 import { GameStatus, HomeKbn } from '../../constants';
 import { UpdateFirstPlayerResponse } from '../../types/responses/update-first-player.http.response';
 import { UpdateFirstPlayerRequest } from '../../types/requests/update-first-player.http.request';
+import { UpdateScoreSocketRequest } from '../../types/requests/update-score.socket.request';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -37,7 +38,6 @@ export class JpaMatch implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private location: Location,
     private socketSvc: SocketService,
     private apiSvc: ApiService,
   ) { }
@@ -53,8 +53,14 @@ export class JpaMatch implements OnInit {
     return this.history().at(-1);
   }
   get currentPlayerKbn(): HomeKbn {
-    return this.history().findLast(a => a.type === 'SWITCH')?.playerKbn === HomeKbn.HOME ? HomeKbn.VISITOR : HomeKbn.HOME;
+    return this.history().findLast(a => a.type === 'SWITCH')?.playerKbn === this.firstPlayerKbn ? this.secondPlayerKbn : this.firstPlayerKbn;
   }
+  get firstPlayerKbn(): HomeKbn {
+    return this.game.firstPlayerKbn;
+  }
+  get secondPlayerKbn(): HomeKbn {
+    return this.firstPlayerKbn === HomeKbn.HOME ? HomeKbn.VISITOR : HomeKbn.HOME;
+  } 
   get currentInning(): number {
     return Math.floor(this.history().filter(a => a.type === 'SWITCH').length / 2) + 1;
   }
@@ -377,8 +383,6 @@ export class JpaMatch implements OnInit {
     }
   }
 
-
-
   async clickDead() {
     this.dead();
     this.sendScore();
@@ -448,7 +452,7 @@ export class JpaMatch implements OnInit {
   }
 
   goBack() {
-    this.location.back();
+    this.router.navigate(['/match-select']);
   }
 
   // 状態制御
@@ -463,7 +467,8 @@ export class JpaMatch implements OnInit {
   }
 
   private sendScore() {
-    this.socketSvc.emit('update-score', { matchId: this.matchId, gameNo: this.gameNo, history: this.history() });
+    const req: UpdateScoreSocketRequest = { game: this.game, history: this.history() }
+    this.socketSvc.emit('update-score', req);
   }
 
   // todo : どこにも使ってないが不要？

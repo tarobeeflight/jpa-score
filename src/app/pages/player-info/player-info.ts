@@ -1,9 +1,8 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { FormsModule } from '@angular/forms';
-import { PlayerService } from '../../service/player-service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../service/api-service';
 import { GameStatus, HomeKbn } from '../../constants';
@@ -18,7 +17,6 @@ import { GameUpdatePlayerRequest } from '../../types/requests/game-update-player
 })
 export class PlayerInfo {
   // 変数
-  // todo : 暫定対応でidを用意している
   homePlayer = signal<Player>({ homeKbn: HomeKbn.HOME, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ホームプレイヤー', skillLevel: 1, goal: 14});
   visitorPlayer = signal<Player>({ homeKbn: HomeKbn.VISITOR, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ビジタープレイヤー', skillLevel: 1, goal: 14});
   matchId: string = '';
@@ -31,8 +29,6 @@ export class PlayerInfo {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private location: Location,
-    private playerSvc: PlayerService,
     private apiSvc: ApiService
   ) { }
 
@@ -110,7 +106,7 @@ export class PlayerInfo {
   }
 
   goBack(): void {
-    this.location.back();
+    this.router.navigate(['/match-select']);
   }
 
   private mapSkillLevelToGoal(player: Player): Player {

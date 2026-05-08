@@ -7,7 +7,8 @@ import { ApiService } from '../../service/api-service';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatchDialog } from '../match-dialog/match-dialog';
-import { GameStatus } from '../../constants';
+import { GameStatus, HomeKbn } from '../../constants';
+import { MatchListBroadcastSocketResponse } from '../../types/responses/match-list-broadcast.socket.response';
 
 @Component({
   selector: 'app-match-select',
@@ -19,11 +20,11 @@ export class MatchSelect implements OnInit {
   // 現在開いている試合のIDを保持する変数
   openedMatchId: string | null = null;
   matches = signal<Match[]>([]);
+  HomeKbn = HomeKbn; // enumをテンプレートで使用するためにクラスのプロパティとして保持
 
 
   constructor(
     private router: Router,
-    private location: Location,
     private apiSvc: ApiService,
     private socketSvc: SocketService,
     private dialog: MatDialog,
@@ -39,15 +40,39 @@ export class MatchSelect implements OnInit {
     this.socketSvc.emit('join-match-list', '');
 
     // 対戦画面での更新を購読
-    this.socketSvc.on<Match>('match-list-broadcast').subscribe((match: Match) => {
-      if (this.matches().some(m => m.matchId === match.matchId)) {
-        // サーバーから受け取った試合が既存の場合、その試合を更新する
-        this.matches.update(matches => matches.map(m => (m.matchId === match.matchId ? { ...m, ...match } : m)));
-      } else {
-        // 既存でない場合、その試合を追加する
-        this.matches.update(matches => [...matches, match]);
+    this.socketSvc.on<MatchListBroadcastSocketResponse>('match-list-broadcast').subscribe((res: MatchListBroadcastSocketResponse) => {
+      if (res.game) {
+        // レスポンスに対戦（一部プロパティのみ）が存在する場合
+
+        // 試合リストを更新する
+        this.matches.update(matches => {
+          // レスポンスの対戦に紐づく試合を抽出
+          const match = matches.find(m => m.matchId === res.game?.matchId)!;
+          // 抽出した試合の対戦リストをレスポンスの対戦で上書き
+          match.gameList = match.gameList.map(g => g.gameNo === res.game?.gameNo
+            ? { ...g, ...res.game } : g);
+          return matches.map(m => m.matchId === match.matchId ? match : m);
+        });
+      }
+
+      if (res.match) {
+        // レスポンスに試合が存在する場合
+
+        // 試合リストに追加する
+        this.matches.update(matches => [...matches, res.match!]);
       }
     });
+  }
+
+  // todo : とりあえずのチーム点数の算出
+  calcTeamPoint(match: Match, homeKbn: HomeKbn): number {
+    let teamPoint = 0;
+    if (homeKbn === HomeKbn.HOME) {
+      match.gameList.forEach(g => teamPoint += g.homeGamePoint ?? 0);
+    } else {
+      match.gameList.forEach(g => teamPoint += g.visitorGamePoint ?? 0);
+    }
+    return teamPoint;
   }
 
   // 詳細の表示・非表示を切り替える
@@ -74,7 +99,7 @@ export class MatchSelect implements OnInit {
   }
 
   goBack() {
-    this.location.back();
+    this.router.navigate(['/home']);
   }
 
   openMatchDialog() {
