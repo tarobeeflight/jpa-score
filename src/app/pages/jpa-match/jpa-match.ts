@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
@@ -13,6 +13,8 @@ import { GameStatus, HomeKbn } from '../../constants';
 import { UpdateFirstPlayerResponse } from '../../types/responses/update-first-player.http.response';
 import { UpdateFirstPlayerRequest } from '../../types/requests/update-first-player.http.request';
 import { UpdateScoreSocketRequest } from '../../types/requests/update-score.socket.request';
+import { MatDialog } from '@angular/material/dialog';
+import { FinishDialog } from '../../dialogs/finish-dialog/finish-dialog';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -40,6 +42,7 @@ export class JpaMatch implements OnInit {
     private router: Router,
     private socketSvc: SocketService,
     private apiSvc: ApiService,
+    private dialog: MatDialog,
   ) { }
 
   // -----------------------------------------
@@ -452,7 +455,9 @@ export class JpaMatch implements OnInit {
   }
 
   goBack() {
+    // todo : テスト用のダイアログ表示
     this.router.navigate(['/match-select']);
+    // this.openFinishDialog();
   }
 
   // 状態制御
@@ -476,6 +481,38 @@ export class JpaMatch implements OnInit {
     // todo : 戻り値はAction[]でいいのか？球番号のリストの方がよい？
     return this.currentRackActions.filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD');
   }
+
+  private openFinishDialog() {
+    // todo : サーバー側で作成してブロードキャストする
+    const finishedGame: Game = {
+      ...this.game,
+      gameStatus: GameStatus.FINISHED,
+      endDt: new Date(),
+      homePlayerPoint: this.getScore(HomeKbn.HOME),
+      homeGamePoint: 18, // todo: スタブ
+      visitorPlayerPoint: this.getScore(HomeKbn.VISITOR),
+      visitorGamePoint: 2, // todo : スタブ
+      winPlayerKbn: HomeKbn.HOME, // todo: スタブ
+    }
+
+
+      const dialogRef = this.dialog.open(FinishDialog, {
+        width: '400px',
+        data: { game: finishedGame },
+      });
+  
+      dialogRef.afterClosed().subscribe(isOk => {
+        if (!isOk) {
+          // キャンセルボタンでクローズした場合、undoを実行
+          this.clickUndo();
+          return;
+        }
+  
+        // OKが押された場合
+        // 対戦データを更新
+        this.apiSvc.post('game/finish', this.game).subscribe();
+      });
+    }
 
 
 }

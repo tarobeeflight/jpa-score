@@ -1,0 +1,50 @@
+<mat-dialog-content class="dialog-container">
+    <!-- 日時 -->
+    <div class="row align-items-center g-1 text-center">
+        <small class="text-muted">
+            {{game.startDt | date : 'yyyy/MM/dd'}}　{{game.startDt | date : 'hh:mm'}} -{{game.endDt | date : 'hh:mm'}}
+        </small>
+    </div>
+    <!-- 勝敗 -->
+    <div class="row align-items-center g-1">
+        <div class="col-6 text-center"
+            [ngClass]="game.winPlayerKbn === HomeKbn.HOME ? 'text-danger' : 'text-secondary'">
+            <ng-container *ngIf="game.winPlayerKbn === HomeKbn.HOME">Win!</ng-container>
+            <ng-container *ngIf="game.winPlayerKbn !== HomeKbn.HOME">Lose..</ng-container>
+        </div>
+        <div class="col-6 text-center"
+            [ngClass]="game.winPlayerKbn === HomeKbn.VISITOR ? 'text-danger' : 'text-secondary'">
+            <ng-container *ngIf="game.winPlayerKbn === HomeKbn.VISITOR">Win!</ng-container>
+            <ng-container *ngIf="game.winPlayerKbn !== HomeKbn.VISITOR">Lose..</ng-container>
+        </div>
+    </div>
+    <!-- プレイヤー名 -->
+    <div class="row align-items-center g-1">
+        <div class="col-6 text-center" [ngClass]="game.winPlayerKbn === HomeKbn.HOME ? 'text-body' : 'text-secondary'">
+            {{game.homePlayerNm}}
+        </div>
+        <div class="col-6 text-center"
+            [ngClass]="game.winPlayerKbn === HomeKbn.VISITOR ? 'text-body' : 'text-secondary'">
+            {{game.visitorPlayerNm}}
+        </div>
+    </div>
+    <!-- 獲得点数 -->
+    <div class="row align-items-center g-1">
+        <div class="col-6 text-center" [ngClass]="game.winPlayerKbn === HomeKbn.HOME ? 'text-body' : 'text-secondary'">
+            {{game.homePlayerPoint}}
+        </div>
+        <div class="col-6 text-center"
+            [ngClass]="game.winPlayerKbn === HomeKbn.VISITOR ? 'text-body' : 'text-secondary'">
+            {{game.visitorPlayerPoint}}
+        </div>
+    </div>
+    <!-- 対戦得点 -->
+    <div class="row align-items-center g-1 text-center">
+        <span>チーム得点: {{game.homeGamePoint}}-{{game.visitorGamePoint}}</span>
+    </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="center">
+    <button mat-raised-button color="primary" (click)="onSave()">OK</button>
+    <button mat-button color="danger" (click)="onCancel()">cancel</button>
+</mat-dialog-actions>
