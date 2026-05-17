@@ -1,5 +1,16 @@
 @use "../../../styles/variables" as *;
 
+#inning-contents {
+    padding: 0;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    margin: 0;
+    margin-bottom: 0.5rem !important;
+    border-bottom: 3px solid #dee2e6 !important;
+    border-top: 3px solid #dee2e6 !important;
+    overflow-y: auto;
+}
+
 .player-turn {
     padding: 0.5rem 0;
     background-color: $secondary-color;
@@ -38,8 +49,8 @@ button:disabled {
 }
 
 .pockets {
-    width: 2rem;
-    height: 2rem;
+    width: 1.5rem;
+    height: 1.5rem;
     margin-right: 0.3rem;
 }
 
@@ -48,3 +59,25 @@ button:disabled {
     opacity: 0.5;
     cursor: none;
 }
+
+.break-col {
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto; width: 15%;
+    text-align: center;
+    overflow-x: hidden;
+}
+
+.pockets-col {
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto; width: 32.5%;
+}
+
+.inning-col {
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto; width: 5%;
+    text-align: center;
+}
+

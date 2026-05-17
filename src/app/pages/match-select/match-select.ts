@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SocketService } from '../../service/socket-service';
@@ -16,7 +16,7 @@ import { MatchListBroadcastSocketResponse } from '../../types/responses/match-li
   templateUrl: './match-select.html',
   styleUrl: './match-select.scss',
 })
-export class MatchSelect implements OnInit {
+export class MatchSelect implements OnInit, OnDestroy {
   // 現在開いている試合のIDを保持する変数
   openedMatchId: string | null = null;
   matches = signal<Match[]>([]);
@@ -62,6 +62,11 @@ export class MatchSelect implements OnInit {
         this.matches.update(matches => [...matches, res.match!]);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    // 対戦ルームを退出
+    this.socketSvc.emit('leave-match-list', {});
   }
 
   // todo : とりあえずのチーム点数の算出

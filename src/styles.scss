@@ -31,15 +31,18 @@ html {
 
 body {
     margin: 0;
-    height: 100%; 
+    height: 100vh;
     background-color: $background-color;
+    margin: 0;
 }
 
 header {
+    height: 5vh;
     width: 100%;
     background-color: $header-color;
     color: $active-text-color;
     padding: 0.5rem;
+    margin: 0;
 }
 
 header .title {
@@ -48,11 +51,12 @@ header .title {
 
 
 main {
-    height: 100vh; 
+    height: 95vh; 
     width: 100vw;
     background-color: $background-color;
     color: $active-text-color;
-    padding: 1rem 2rem;
+    padding: 0.5rem 0.5rem;
+    margin: 0;
 }
 
 .image-container {

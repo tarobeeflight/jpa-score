@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { InningRecord } from '../../types/inning-record.type';
@@ -15,6 +15,7 @@ import { UpdateFirstPlayerRequest } from '../../types/requests/update-first-play
 import { UpdateScoreSocketRequest } from '../../types/requests/update-score.socket.request';
 import { MatDialog } from '@angular/material/dialog';
 import { FinishDialog } from '../../dialogs/finish-dialog/finish-dialog';
+import { GamePoint } from '../../types/game-point.type';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -24,17 +25,20 @@ type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
   templateUrl: './jpa-match.html',
   styleUrl: './jpa-match.scss',
 })
-export class JpaMatch implements OnInit {
+export class JpaMatch implements OnInit, OnDestroy {
   // 定数
   readonly MIN_DISPLAY_INNING = 10;
 
   // 変数
   private matchId!: string;
   private gameNo!: number;
-  players!: Player[];
+  players = signal<Player[]>([]);
   private game!: Game;
   private history = signal<Action[]>([]);
   isChoosingFirstPlayer = signal<boolean>(true);
+  HomeKbn = HomeKbn;
+  private isDispFinishDialog: boolean = false;
+  private gamePointMatrix: GamePoint[] = [];
 
   // コンストラクタ
   constructor(
@@ -129,7 +133,7 @@ export class JpaMatch implements OnInit {
             }
           }
           // 1イニング目は先攻プレイヤーのブレークフラグを立てる
-          if (a.inning === 1 && a.playerKbn === this.game.firstPlayerKbn) {
+          if (a.inning === 1 && a.playerKbn === this.game.firstPlayerKbn) {// todo : this.firstPlayerKbnでいい
             if (a.playerKbn === HomeKbn.HOME) {
               record!.isHomePlayerBreak = true;
             } else {
@@ -149,7 +153,7 @@ export class JpaMatch implements OnInit {
     });
 
     // アクション履歴の最後が後攻プレイヤーのスイッチの場合、空のイニングを追加
-    if (!this.lastAction || (this.lastAction.type === 'SWITCH' && this.lastAction.playerKbn !== this.game.firstPlayerKbn)) {
+    if (!this.lastAction || (this.lastAction.type === 'SWITCH' && this.lastAction.playerKbn !== this.game.firstPlayerKbn)) { // todo : this.secondPlayerKbnでいい
       records.push({
         inning: this.currentInning,
         homePlayerPockets: [],
@@ -218,8 +222,6 @@ export class JpaMatch implements OnInit {
     });
   }
 
-
-
   ngOnInit() {
     // ルーティングパラメータの取得
     this.matchId = this.route.snapshot.paramMap.get('matchId') ?? '';
@@ -229,6 +231,7 @@ export class JpaMatch implements OnInit {
     this.apiSvc.get<JpaMatchInitResponse>(`jpa-match/init/${this.matchId}/${this.gameNo}`).subscribe({
       next: (res) => {
         const { game, history } = res;
+        this.gamePointMatrix = res.gamePointMatrix;
 
         if (!game) {
           // 対戦が存在しない場合、試合選択画面に遷移
@@ -269,7 +272,7 @@ export class JpaMatch implements OnInit {
             skillLevel: game.visitorSkillLevel,
             goal: game.visitorGoal,
           };
-          this.players = [homePlayer, visitorPlayer];
+          this.players.set([homePlayer, visitorPlayer]);
           
           // サブスクリプションの開始
           if (!this.isChoosingFirstPlayer()) {
@@ -279,12 +282,23 @@ export class JpaMatch implements OnInit {
             // アクション履歴の更新を購読する
             this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
               this.history.set(history);
+              // 対戦完了の判定
+              if (this.getScore(HomeKbn.HOME) === this.game.homeGoal) {
+                this.openFinishDialog(HomeKbn.HOME);
+              }
+              if (this.getScore(HomeKbn.VISITOR) === this.game.visitorGoal) {
+                this.openFinishDialog(HomeKbn.VISITOR);
+              }
             });
           }
         }
       }
     });
+  }
 
+  ngOnDestroy(): void {
+    // 対戦ルームを退出
+    this.socketSvc.emit('leave-game', { matchId: this.matchId, gameNo: this.gameNo });
   }
 
   private getBallState(ballNumber: number): State {
@@ -482,17 +496,35 @@ export class JpaMatch implements OnInit {
     return this.currentRackActions.filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD');
   }
 
-  private openFinishDialog() {
-    // todo : サーバー側で作成してブロードキャストする
+  private calcGamePoint(loserSkillLevel: number, loserPoint: number): {winnerGamePoint: number, loserGamePoint: number} {
+        const gamePoint = this.gamePointMatrix.find(record => (
+            record.loserSkillLevel === loserSkillLevel
+            && record.loserPointLower <= loserPoint
+            && record.loserPointUpper >= loserPoint
+        ))!;
+        // todo : 勝者側の場合、マップになくてエラーになるので、一旦0で返している。要修正
+        return {winnerGamePoint: gamePoint.winnerGamePoint, loserGamePoint: gamePoint.loserGamePoint};
+    }
+
+  private openFinishDialog(winnerHomeKbn: HomeKbn) {
+    if (this.isDispFinishDialog) {
+      return;
+    }
+
+    // 対戦得点を計算
+    const loserSkillLevel = winnerHomeKbn === HomeKbn.HOME ? this.game.visitorSkillLevel : this.game.homeSkillLevel;
+    const loserPlayerPoint = winnerHomeKbn === HomeKbn.HOME ? this.getScore(HomeKbn.VISITOR) : this.getScore(HomeKbn.HOME);
+    const gamePoint = this.calcGamePoint(loserSkillLevel, loserPlayerPoint);
+
     const finishedGame: Game = {
       ...this.game,
       gameStatus: GameStatus.FINISHED,
       endDt: new Date(),
       homePlayerPoint: this.getScore(HomeKbn.HOME),
-      homeGamePoint: 18, // todo: スタブ
+      homeGamePoint: winnerHomeKbn === HomeKbn.HOME ? gamePoint.winnerGamePoint : gamePoint.loserGamePoint,
       visitorPlayerPoint: this.getScore(HomeKbn.VISITOR),
-      visitorGamePoint: 2, // todo : スタブ
-      winPlayerKbn: HomeKbn.HOME, // todo: スタブ
+      visitorGamePoint: winnerHomeKbn === HomeKbn.VISITOR ? gamePoint.winnerGamePoint : gamePoint.loserGamePoint,
+      winPlayerKbn: winnerHomeKbn,
     }
 
 
@@ -500,8 +532,12 @@ export class JpaMatch implements OnInit {
         width: '400px',
         data: { game: finishedGame },
       });
+
+      this.isDispFinishDialog = true;
   
       dialogRef.afterClosed().subscribe(isOk => {
+        this.isDispFinishDialog = false;
+
         if (!isOk) {
           // キャンセルボタンでクローズした場合、undoを実行
           this.clickUndo();
@@ -510,9 +546,7 @@ export class JpaMatch implements OnInit {
   
         // OKが押された場合
         // 対戦データを更新
-        this.apiSvc.post('game/finish', this.game).subscribe();
+        // this.apiSvc.post('game/finish', finishedGame).subscribe();
       });
     }
-
-
 }
