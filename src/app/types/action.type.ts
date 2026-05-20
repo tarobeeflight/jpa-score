@@ -1,9 +1,7 @@
-import { HomeKbn } from "../constants";
-
-export type ActionType = 'POCKET' | 'DEAD' | 'NO_ACTION_DEAD' | 'SAFETY' | 'SWITCH';
+import { ActionType, HomeKbn } from "../constants";
 
 export type Action = {
-  actionId: number;
+  actionNo: number;
   playerKbn: HomeKbn;
   rack: number;
   inning: number;

@@ -38,6 +38,10 @@ export class MatchSelect implements OnInit, OnDestroy {
 
     // 試合一覧ルームに参加
     this.socketSvc.emit('join-match-list', '');
+    // 再接続時に再入室するタスクを登録
+    this.socketSvc.registerReconnectTask(() => {
+      this.socketSvc.emit('join-match-list', '');
+    });
 
     // 対戦画面での更新を購読
     this.socketSvc.on<MatchListBroadcastSocketResponse>('match-list-broadcast').subscribe((res: MatchListBroadcastSocketResponse) => {
@@ -67,6 +71,8 @@ export class MatchSelect implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     // 対戦ルームを退出
     this.socketSvc.emit('leave-match-list', {});
+    // 再入室タスクをクリア
+    this.socketSvc.clearReconnectTask();
   }
 
   // todo : とりあえずのチーム点数の算出

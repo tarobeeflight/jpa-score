@@ -11,9 +11,39 @@ export class SocketService {
   private socket: Socket;
   private socketUrl = environment.socketUrl;
 
+  // 再接続時に実行する処理（ルームの再入室）
+  private reconnectTask: (() => void) | null = null;
+
   constructor() {
     // サーバーのURLを指定
     this.socket = io(this.socketUrl);
+
+    // 再接続イベントの監視
+    // 接続が切れて新しいソケットIDで繋がり直した際、ルームに再入室する
+    this.socket.on('connect', () => {
+      console.log(`Socket connected! ID: ${this.socket.id}`);
+
+      // 再接続イベントの監視
+      this.socket.on('connect', () => {
+        console.log(`Socket connected! ID: ${this.socket.id}`);
+
+        // 再接続タスクが登録されていれば、それを実行してルームに入り直す
+        if (this.reconnectTask) {
+          console.log('Executing reconnect task...');
+          this.reconnectTask();
+        }
+      });
+    });
+  }
+
+  // 再接続時タスクを登録
+  registerReconnectTask(task: () => void) {
+    this.reconnectTask = task;
+  }
+
+  // 再接続タスクを解除
+  clearReconnectTask() {
+    this.reconnectTask = null;
   }
 
   emit<T>(event: string, request: T) {

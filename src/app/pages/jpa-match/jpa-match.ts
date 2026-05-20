@@ -1,21 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, OnDestroy, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Player } from '../../types/player.type';
 import { InningRecord } from '../../types/inning-record.type';
 import { SocketService } from '../../service/socket-service';
-import { Action, ActionType } from '../../types/action.type';
+import { Action } from '../../types/action.type';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Game } from '../../types/game.type';
 import { ApiService } from '../../service/api-service';
 import { JpaMatchInitResponse } from '../../types/responses/jpa-match-init.http.response';
-import { GameStatus, HomeKbn } from '../../constants';
+import { ActionType, GameStatus, HomeKbn } from '../../constants';
 import { UpdateFirstPlayerResponse } from '../../types/responses/update-first-player.http.response';
 import { UpdateFirstPlayerRequest } from '../../types/requests/update-first-player.http.request';
 import { UpdateScoreSocketRequest } from '../../types/requests/update-score.socket.request';
 import { MatDialog } from '@angular/material/dialog';
 import { FinishDialog } from '../../dialogs/finish-dialog/finish-dialog';
 import { GamePoint } from '../../types/game-point.type';
+import { GameFinishRequest } from '../../types/requests/game-finish.http.request';
 
 type State = 'ENABLE' | 'DISABLE' | 'HIDDEN' | 'HIGHLIGHT';
 
@@ -33,7 +34,8 @@ export class JpaMatch implements OnInit, OnDestroy {
   private matchId!: string;
   private gameNo!: number;
   players = signal<Player[]>([]);
-  private game!: Game;
+  private gameRaw = signal<Game | null>(null);
+  private game = computed(() => this.gameRaw() ?? {} as Game);
   private history = signal<Action[]>([]);
   isChoosingFirstPlayer = signal<boolean>(true);
   HomeKbn = HomeKbn;
@@ -53,29 +55,29 @@ export class JpaMatch implements OnInit, OnDestroy {
   // GETTER
   // -----------------------------------------
   get startDt(): Date {
-    return this.game?.startDt;
+    return this.game().startDt;
   }
   // 現在状態の取得
   get lastAction(): Action | undefined {
     return this.history().at(-1);
   }
   get currentPlayerKbn(): HomeKbn {
-    return this.history().findLast(a => a.type === 'SWITCH')?.playerKbn === this.firstPlayerKbn ? this.secondPlayerKbn : this.firstPlayerKbn;
+    return this.history().findLast(a => a.type === ActionType.SWITCH)?.playerKbn === this.firstPlayerKbn ? this.secondPlayerKbn : this.firstPlayerKbn;
   }
   get firstPlayerKbn(): HomeKbn {
-    return this.game.firstPlayerKbn;
+    return this.game().firstPlayerKbn;
   }
   get secondPlayerKbn(): HomeKbn {
     return this.firstPlayerKbn === HomeKbn.HOME ? HomeKbn.VISITOR : HomeKbn.HOME;
-  } 
+  }
   get currentInning(): number {
-    return Math.floor(this.history().filter(a => a.type === 'SWITCH').length / 2) + 1;
+    return Math.floor(this.history().filter(a => a.type === ActionType.SWITCH).length / 2) + 1;
   }
   get currentRack(): number {
     return this.history().filter(a => a.rackEnd).length + 1;
   }
   get deadCount(): number {
-    return this.history().filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD').length;
+    return this.history().filter(a => a.type === ActionType.DEAD || a.type === ActionType.NO_ACTION_DEAD).length;
   }
   get inningRecords(): InningRecord[] {
     if (this.currentInning > this.MIN_DISPLAY_INNING) {
@@ -117,7 +119,7 @@ export class JpaMatch implements OnInit, OnDestroy {
       const record = records.find(r => r.inning === a.inning);
 
       switch (a.type) {
-        case 'POCKET':
+        case ActionType.POCKET:
           // ポケットリストの追加
           if (a.playerKbn === HomeKbn.HOME) {
             record!.homePlayerPockets.push(a.ballNumber!);
@@ -133,7 +135,7 @@ export class JpaMatch implements OnInit, OnDestroy {
             }
           }
           // 1イニング目は先攻プレイヤーのブレークフラグを立てる
-          if (a.inning === 1 && a.playerKbn === this.game.firstPlayerKbn) {// todo : this.firstPlayerKbnでいい
+          if (a.inning === 1 && a.playerKbn === this.firstPlayerKbn) {
             if (a.playerKbn === HomeKbn.HOME) {
               record!.isHomePlayerBreak = true;
             } else {
@@ -141,7 +143,7 @@ export class JpaMatch implements OnInit, OnDestroy {
             }
           }
           break;
-        case 'SAFETY':
+        case ActionType.SAFETY:
           // セーフティの設定
           if (a.playerKbn === HomeKbn.HOME) {
             record!.isHomePlayerSafety = true;
@@ -153,15 +155,15 @@ export class JpaMatch implements OnInit, OnDestroy {
     });
 
     // アクション履歴の最後が後攻プレイヤーのスイッチの場合、空のイニングを追加
-    if (!this.lastAction || (this.lastAction.type === 'SWITCH' && this.lastAction.playerKbn !== this.game.firstPlayerKbn)) { // todo : this.secondPlayerKbnでいい
+    if (!this.lastAction || (this.lastAction.type === ActionType.SWITCH && this.lastAction.playerKbn !== this.firstPlayerKbn)) {
       records.push({
         inning: this.currentInning,
         homePlayerPockets: [],
         visitorPlayerPockets: [],
         isHomePlayerSafety: false,
         isVisitorPlayerSafety: false,
-        isHomePlayerBreak: this.currentInning === 1 && this.game?.firstPlayerKbn === HomeKbn.HOME,
-        isVisitorPlayerBreak: this.currentInning === 1 && this.game?.firstPlayerKbn === HomeKbn.VISITOR,
+        isHomePlayerBreak: this.currentInning === 1 && this.firstPlayerKbn === HomeKbn.HOME,
+        isVisitorPlayerBreak: this.currentInning === 1 && this.firstPlayerKbn === HomeKbn.VISITOR,
       });
     }
 
@@ -178,9 +180,9 @@ export class JpaMatch implements OnInit, OnDestroy {
     switch (lastAction?.type) {
       // 初期状態
       case undefined:
-      case 'SWITCH':
-      case 'DEAD':
-      case 'NO_ACTION_DEAD':
+      case ActionType.SWITCH:
+      case ActionType.DEAD:
+      case ActionType.NO_ACTION_DEAD:
         btnStates = {
           btnDead: 'DISABLE',
           btnSafety: 'ENABLE',
@@ -189,7 +191,7 @@ export class JpaMatch implements OnInit, OnDestroy {
         };
         break;
       // ポケット後
-      case 'POCKET':
+      case ActionType.POCKET:
         btnStates = {
           btnDead: 'ENABLE',
           btnSafety: 'ENABLE',
@@ -198,7 +200,7 @@ export class JpaMatch implements OnInit, OnDestroy {
         };
         break;
       // セーフティ後
-      case 'SAFETY':
+      case ActionType.SAFETY:
         btnStates = {
           btnDead: 'DISABLE',
           btnSafety: 'DISABLE',
@@ -237,7 +239,7 @@ export class JpaMatch implements OnInit, OnDestroy {
           // 対戦が存在しない場合、試合選択画面に遷移
           alert('該当の試合が存在しないため、試合一覧画面に遷移します。');
           this.router.navigate(['/match-select']);
-        } else if (game.gameStatus === GameStatus.CREATED || game.gameStatus === GameStatus.FINISHED) {
+        } else if (game.gameStatus === GameStatus.CREATED) {
           // 対戦ステータスが作成済の場合、プレイヤー入力画面に遷移
           alert('該当の試合はプレイヤー情報が未入力のため、プレイヤー入力画面に遷移します。');
           this.router.navigate(['/player-info', this.matchId, this.gameNo]);
@@ -245,11 +247,11 @@ export class JpaMatch implements OnInit, OnDestroy {
           // 対戦ステータスがプレイヤー登録済みまたは終了の場合
 
           // 試合情報・アクション履歴を保持する
-          this.game = {
+          this.gameRaw.set({
             ...game,
             // todo : httpで文字列になったDateの変換。一括で対応する。
             startDt: new Date(game.startDt),
-          };
+          });
           this.history.set(history);
           // 先攻選択中フラグを設定する
           this.isChoosingFirstPlayer.set(!game.firstPlayerKbn);
@@ -273,20 +275,24 @@ export class JpaMatch implements OnInit, OnDestroy {
             goal: game.visitorGoal,
           };
           this.players.set([homePlayer, visitorPlayer]);
-          
+
           // サブスクリプションの開始
           if (!this.isChoosingFirstPlayer()) {
             // 対戦ごとのsocketルームへ参加
             this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
-        
+            // 再接続時に再入室するタスクを登録
+            this.socketSvc.registerReconnectTask(() => {
+              this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+            });
+
             // アクション履歴の更新を購読する
             this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
               this.history.set(history);
               // 対戦完了の判定
-              if (this.getScore(HomeKbn.HOME) === this.game.homeGoal) {
+              if (this.getScore(HomeKbn.HOME) === this.game().homeGoal) {
                 this.openFinishDialog(HomeKbn.HOME);
               }
-              if (this.getScore(HomeKbn.VISITOR) === this.game.visitorGoal) {
+              if (this.getScore(HomeKbn.VISITOR) === this.game().visitorGoal) {
                 this.openFinishDialog(HomeKbn.VISITOR);
               }
             });
@@ -299,6 +305,8 @@ export class JpaMatch implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     // 対戦ルームを退出
     this.socketSvc.emit('leave-game', { matchId: this.matchId, gameNo: this.gameNo });
+    // 再入室タスクをクリア
+    this.socketSvc.clearReconnectTask();
   }
 
   private getBallState(ballNumber: number): State {
@@ -306,23 +314,23 @@ export class JpaMatch implements OnInit, OnDestroy {
     const lastAction = currentActions.at(-1); // history().atじゃあかんの？
 
     // 最新アクションがポケットの場合、その球をハイライト
-    if (lastAction && lastAction.type === 'POCKET' && lastAction.ballNumber === ballNumber) {
+    if (lastAction && lastAction.type === ActionType.POCKET && lastAction.ballNumber === ballNumber) {
       return 'HIGHLIGHT';
     }
 
     // 現在ラックの無効球は非表示
-    const deadAction = currentActions.find(a => (a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD') && a.ballNumber === ballNumber);
+    const deadAction = currentActions.find(a => (a.type === ActionType.DEAD || a.type === ActionType.NO_ACTION_DEAD) && a.ballNumber === ballNumber);
     if (deadAction) {
       return 'HIDDEN';
     }
 
     // 最新アクションがセーフティの場合、全球非活性 // todo : この順番でちゃんと判定される？
-    if (lastAction && lastAction.type === 'SAFETY') {
+    if (lastAction && lastAction.type === ActionType.SAFETY) {
       return 'DISABLE';
     }
 
     // 現在ラックのポケット済みの球は非活性
-    const pocketAction = currentActions.find(a => a.type === 'POCKET' && a.ballNumber === ballNumber);
+    const pocketAction = currentActions.find(a => a.type === ActionType.POCKET && a.ballNumber === ballNumber);
     if (pocketAction) {
       return 'DISABLE';
     }
@@ -332,13 +340,13 @@ export class JpaMatch implements OnInit, OnDestroy {
   }
   private addAction(type: ActionType, ballNumber?: number) {
     const newAction: Action = {
-      actionId: this.history().length + 1,
+      actionNo: this.history().length + 1,
       playerKbn: this.currentPlayerKbn,
       rack: this.currentRack,
       inning: this.currentInning,
       type,
       ballNumber,
-      rackEnd: type === 'POCKET' && ballNumber === 9
+      rackEnd: type === ActionType.POCKET && ballNumber === 9
     };
 
     this.history.update(prev => [...prev, newAction]);
@@ -354,31 +362,31 @@ export class JpaMatch implements OnInit, OnDestroy {
       for (let b = 1; b < 9; b++) {
         const isExist = this.currentRackActions.every(a => a.ballNumber !== b);
         if (isExist) {
-          this.addAction('NO_ACTION_DEAD', b);
+          this.addAction(ActionType.NO_ACTION_DEAD, b);
         }
       }
     }
-    this.addAction('POCKET', ballNumber);
+    this.addAction(ActionType.POCKET, ballNumber);
   }
 
   // デッド
   dead() {
     const lastAction = this.history().at(-1);
-    if (!lastAction || lastAction.type !== 'POCKET') {
+    if (!lastAction || lastAction.type !== ActionType.POCKET) {
       throw new Error('デッド直前のアクションがPOCKETではありません。');
     }
     this.history.update(prev => prev.slice(0, -1));
-    this.addAction('DEAD', lastAction.ballNumber);
+    this.addAction(ActionType.DEAD, lastAction.ballNumber);
   }
 
   // セーフティ
   safety() {
-    this.addAction('SAFETY');
+    this.addAction(ActionType.SAFETY);
   }
 
   // スイッチ
   switch() {
-    this.addAction('SWITCH');
+    this.addAction(ActionType.SWITCH);
   }
 
   // アンドゥ
@@ -394,7 +402,7 @@ export class JpaMatch implements OnInit, OnDestroy {
       if (!lastAction) {
         return;
       }
-      if (lastAction.type !== 'NO_ACTION_DEAD') {
+      if (lastAction.type !== ActionType.NO_ACTION_DEAD) {
         break;
       }
     }
@@ -439,14 +447,18 @@ export class JpaMatch implements OnInit, OnDestroy {
       matchId: this.matchId,
       gameNo: this.gameNo,
       firstPlayerKbn: playerKbn,
-      revision: this.game.revision,
+      revision: this.game().revision,
     };
     await this.apiSvc.post<UpdateFirstPlayerRequest, UpdateFirstPlayerResponse>(`game/update/first-player`, data).subscribe({
       next: (res) => {
         if (res.isHaita) {
           alert('他のユーザによって先攻プレイヤーが入力されているため、入力情報を保存できませんでした。');
         }
-        this.game.firstPlayerKbn = res.firstPlayerKbn;
+        this.gameRaw.update(g => {
+          if (g === null) return null;
+          g.firstPlayerKbn = res.firstPlayerKbn;
+          return g;
+        })
       }
     });
 
@@ -455,6 +467,10 @@ export class JpaMatch implements OnInit, OnDestroy {
 
     // 対戦ごとのsocketルームへ参加
     this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+    // 再接続時に再入室するタスクを登録
+    this.socketSvc.registerReconnectTask(() => {
+      this.socketSvc.emit('join-game', { matchId: this.matchId, gameNo: this.gameNo });
+    });
 
     // アクション履歴の更新を購読する
     this.socketSvc.on<Action[]>('history-broadcast').subscribe((history: Action[]) => {
@@ -464,7 +480,7 @@ export class JpaMatch implements OnInit, OnDestroy {
 
   getScore(playerKbn: HomeKbn) {
     return this.history()
-      .filter(a => a.playerKbn === playerKbn && a.type === 'POCKET')
+      .filter(a => a.playerKbn === playerKbn && a.type === ActionType.POCKET)
       .reduce((sum, a) => sum + (a.ballNumber === 9 ? 2 : 1), 0);
   }
 
@@ -476,6 +492,9 @@ export class JpaMatch implements OnInit, OnDestroy {
 
   // 状態制御
   isDisabled(name: string): boolean {
+    if (this.game().gameStatus === GameStatus.FINISHED) {
+      return true;
+    }
     return this.componentStates[name] === 'DISABLE';
   }
   isHidden(name: string): boolean {
@@ -486,25 +505,25 @@ export class JpaMatch implements OnInit, OnDestroy {
   }
 
   private sendScore() {
-    const req: UpdateScoreSocketRequest = { game: this.game, history: this.history() }
+    const req: UpdateScoreSocketRequest = { game: this.game(), history: this.history() }
     this.socketSvc.emit('update-score', req);
   }
 
   // todo : どこにも使ってないが不要？
   get currentRackDeadList(): Action[] {
     // todo : 戻り値はAction[]でいいのか？球番号のリストの方がよい？
-    return this.currentRackActions.filter(a => a.type === 'DEAD' || a.type === 'NO_ACTION_DEAD');
+    return this.currentRackActions.filter(a => a.type === ActionType.DEAD || a.type === ActionType.NO_ACTION_DEAD);
   }
 
-  private calcGamePoint(loserSkillLevel: number, loserPoint: number): {winnerGamePoint: number, loserGamePoint: number} {
-        const gamePoint = this.gamePointMatrix.find(record => (
-            record.loserSkillLevel === loserSkillLevel
-            && record.loserPointLower <= loserPoint
-            && record.loserPointUpper >= loserPoint
-        ))!;
-        // todo : 勝者側の場合、マップになくてエラーになるので、一旦0で返している。要修正
-        return {winnerGamePoint: gamePoint.winnerGamePoint, loserGamePoint: gamePoint.loserGamePoint};
-    }
+  private calcGamePoint(loserSkillLevel: number, loserPoint: number): { winnerGamePoint: number, loserGamePoint: number } {
+    const gamePoint = this.gamePointMatrix.find(record => (
+      record.loserSkillLevel === loserSkillLevel
+      && record.loserPointLower <= loserPoint
+      && record.loserPointUpper >= loserPoint
+    ))!;
+    // todo : 勝者側の場合、マップになくてエラーになるので、一旦0で返している。要修正
+    return { winnerGamePoint: gamePoint.winnerGamePoint, loserGamePoint: gamePoint.loserGamePoint };
+  }
 
   private openFinishDialog(winnerHomeKbn: HomeKbn) {
     if (this.isDispFinishDialog) {
@@ -512,12 +531,12 @@ export class JpaMatch implements OnInit, OnDestroy {
     }
 
     // 対戦得点を計算
-    const loserSkillLevel = winnerHomeKbn === HomeKbn.HOME ? this.game.visitorSkillLevel : this.game.homeSkillLevel;
+    const loserSkillLevel = winnerHomeKbn === HomeKbn.HOME ? this.game().visitorSkillLevel : this.game().homeSkillLevel;
     const loserPlayerPoint = winnerHomeKbn === HomeKbn.HOME ? this.getScore(HomeKbn.VISITOR) : this.getScore(HomeKbn.HOME);
     const gamePoint = this.calcGamePoint(loserSkillLevel, loserPlayerPoint);
 
     const finishedGame: Game = {
-      ...this.game,
+      ...this.game(),
       gameStatus: GameStatus.FINISHED,
       endDt: new Date(),
       homePlayerPoint: this.getScore(HomeKbn.HOME),
@@ -528,25 +547,28 @@ export class JpaMatch implements OnInit, OnDestroy {
     }
 
 
-      const dialogRef = this.dialog.open(FinishDialog, {
-        width: '400px',
-        data: { game: finishedGame },
-      });
+    const dialogRef = this.dialog.open(FinishDialog, {
+      width: '400px',
+      data: { game: finishedGame },
+    });
 
-      this.isDispFinishDialog = true;
-  
-      dialogRef.afterClosed().subscribe(isOk => {
-        this.isDispFinishDialog = false;
+    this.isDispFinishDialog = true;
 
-        if (!isOk) {
-          // キャンセルボタンでクローズした場合、undoを実行
-          this.clickUndo();
-          return;
-        }
-  
-        // OKが押された場合
-        // 対戦データを更新
-        // this.apiSvc.post('game/finish', finishedGame).subscribe();
-      });
-    }
+    dialogRef.afterClosed().subscribe(async isOk => {
+      this.isDispFinishDialog = false;
+
+      if (!isOk) {
+        // キャンセルボタンでクローズした場合、undoを実行
+        this.clickUndo();
+        return;
+      }
+
+      // OKが押された場合
+      // 対戦データを更新
+      const req: GameFinishRequest = { game: finishedGame, history: this.history() };
+      await this.apiSvc.post('game/finish', req).subscribe();
+      // 試合一覧画面に遷移
+      this.router.navigate(['/match-select']);
+    });
+  }
 }
