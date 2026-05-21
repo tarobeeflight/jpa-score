@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatchDialog } from '../match-dialog/match-dialog';
 import { GameStatus, HomeKbn } from '../../constants';
 import { MatchListBroadcastSocketResponse } from '../../types/responses/match-list-broadcast.socket.response';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-match-select',
@@ -21,7 +22,8 @@ export class MatchSelect implements OnInit, OnDestroy {
   openedMatchId: string | null = null;
   matches = signal<Match[]>([]);
   HomeKbn = HomeKbn; // enumをテンプレートで使用するためにクラスのプロパティとして保持
-
+  // コンポーネント破棄を通知するためのSubject
+  private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
@@ -32,7 +34,7 @@ export class MatchSelect implements OnInit, OnDestroy {
 
   ngOnInit() {
     // 試合情報の取得
-    this.apiSvc.get<Match[]>('match/list').subscribe(matches => {
+    this.apiSvc.get<Match[]>('match/list').pipe(takeUntil(this.destroy$)).subscribe(matches => {
       this.matches.set(matches);
     });
 
@@ -44,7 +46,9 @@ export class MatchSelect implements OnInit, OnDestroy {
     });
 
     // 対戦画面での更新を購読
-    this.socketSvc.on<MatchListBroadcastSocketResponse>('match-list-broadcast').subscribe((res: MatchListBroadcastSocketResponse) => {
+    this.socketSvc.on<MatchListBroadcastSocketResponse>('match-list-broadcast')
+    .pipe(takeUntil(this.destroy$)) // 画面破棄時にdestroy$を発火させて購読を終了する
+    .subscribe((res: MatchListBroadcastSocketResponse) => {
       if (res.game) {
         // レスポンスに対戦（一部プロパティのみ）が存在する場合
 
@@ -69,13 +73,17 @@ export class MatchSelect implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // 対戦ルームを退出
-    this.socketSvc.emit('leave-match-list', {});
+    // http, socketの購読を解除するためにdestroy$を発火
+    this.destroy$.next();
+    this.destroy$.complete();
+
     // 再入室タスクをクリア
     this.socketSvc.clearReconnectTask();
+    // 対戦ルームを退出
+    this.socketSvc.emit('leave-match-list', {});
   }
 
-  // todo : とりあえずのチーム点数の算出
+  // todo : とりあえずのチーム点数の算出。完了試合はdbからとりたい。
   calcTeamPoint(match: Match, homeKbn: HomeKbn): number {
     let teamPoint = 0;
     if (homeKbn === HomeKbn.HOME) {

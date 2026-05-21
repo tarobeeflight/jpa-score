@@ -42,7 +42,6 @@ export class MatchDialog implements OnInit {
 
   ngOnInit() {
     // チーム情報の取得
-    // todo : データの取得が遅いと先に画面が表示されてしまうが一旦保留。フラグで描画を制御するなどの対応が必要かも。
     this.apiSvc.get<Team[]>('team/list').subscribe(teams => {
       this.teams = teams.map(team => ({ id: team.teamId, name: team.teamNm }));
     });

@@ -16,7 +16,7 @@ export class ApiService {
   post<T, U>(endpoint: string, data: T): Observable<U> {
     return this.http.post<ApiResponse<U>>(`${this.apiUrl}/${endpoint}`, data).pipe(
       map(response => {
-        console.log(`POST API [${endpoint}] Response:`, response);
+        console.log(`POST API [${endpoint}]`);
 
         if (response.status !== 'success') {
           throw new Error(response.message || 'API Error');
@@ -30,7 +30,7 @@ export class ApiService {
   get<T>(endpoint: string): Observable<T> {
     return this.http.get<ApiResponse<T>>(`${this.apiUrl}/${endpoint}`).pipe(
       map(response => {
-        console.log(`GET API [${endpoint}] Response:`, response);
+        console.log(`GET API [${endpoint}]`);
 
         if (response.status !== 'success') {
           throw new Error(response.message || 'API Error');

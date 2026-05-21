@@ -57,7 +57,6 @@ export class SocketService {
           observer.next(res.data as T);
           console.log(`Received ${event} from server:`);
           console.log(`message: ${res.message}`);
-          console.log(`response: ${res.data}`);
         } else {
           console.error(`Error ${event} from server:`, res.message);
         }

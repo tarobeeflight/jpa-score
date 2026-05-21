@@ -27,6 +27,9 @@
                     <div>Goal: {{player.goal}}</div>
                 </div>
                 <div class="text-center fs-1">{{getScore(player.homeKbn)}}</div>
+                <ng-container *ngIf="getMore(player.homeKbn) <= 5 && getMore(player.homeKbn) > 0">
+                    <div class="text-center text-warning">{{getMore(player.homeKbn)}} more!</div>
+                </ng-container>
             </div>
         </ng-container>
     </div>
