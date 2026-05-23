@@ -451,11 +451,7 @@ export class JpaMatch implements OnInit, OnDestroy {
           if (res.isHaita) {
             alert('他のユーザによって先攻プレイヤーが入力されているため、入力情報を保存できませんでした。');
           }
-          this.gameRaw.update(g => {
-            if (g === null) return null;
-            g.firstPlayerKbn = res.firstPlayerKbn;
-            return g;
-          })
+          this.gameRaw.set(res.game);
         }
       });
 

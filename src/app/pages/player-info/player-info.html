@@ -18,8 +18,8 @@
             <!-- プレイヤー -->
             <div class="mb-5">
                 <div class="fs-2 fw-bold">
-                    <ng-container *ngIf="player.homeKbn === HomeKbn.HOME">ホームプレイヤー</ng-container>
-                    <ng-container *ngIf="player.homeKbn === HomeKbn.VISITOR">ビジタープレイヤー</ng-container>
+                    <ng-container *ngIf="player.homeKbn === HomeKbn.HOME">{{homeTeamNm() ?? 'ホームプレイヤー'}}</ng-container>
+                    <ng-container *ngIf="player.homeKbn === HomeKbn.VISITOR">{{visitorTeamNm() ?? 'ビジタープレイヤー'}}</ng-container>
                 </div>
                 <!-- プレイヤー名 -->
                 <div class="row mb-2">

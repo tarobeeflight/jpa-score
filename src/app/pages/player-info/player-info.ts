@@ -17,6 +17,8 @@ import { GameUpdatePlayerRequest } from '../../types/requests/game-update-player
 })
 export class PlayerInfo {
   // 変数
+  homeTeamNm = signal<string | null>(null);
+  visitorTeamNm = signal<string | null>(null);
   homePlayer = signal<Player>({ homeKbn: HomeKbn.HOME, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ホームプレイヤー', skillLevel: 1, goal: 14});
   visitorPlayer = signal<Player>({ homeKbn: HomeKbn.VISITOR, isFirst: undefined, playerId: null, jpaPlayerId: null, name: 'ビジタープレイヤー', skillLevel: 1, goal: 14});
   matchId: string = '';
@@ -41,9 +43,9 @@ export class PlayerInfo {
     // 対戦の取得
     this.apiSvc.get<PlayerInfoInitResponse>(`player-info/init/${this.matchId}/${this.gameNo}`).subscribe({
       next: (res) => {
-        const { game, skillToGoal } = res;
+        const { match, game, skillToGoal } = res;
 
-        if (!game) {
+        if (!match || !game) {
           // 対戦が存在しない場合、試合選択画面に遷移
           alert('該当の試合が存在しないため、試合一覧画面に遷移します。');
           this.router.navigate(['/match-select']);
@@ -53,6 +55,8 @@ export class PlayerInfo {
           this.router.navigate(['/jpa-match', this.matchId, this.gameNo]);
         } else {
           // 対戦ステータスが作成済の場合、リビジョン・SK目標点数マップを保持する
+          this.homeTeamNm.set(match.homeTeamNm);
+          this.visitorTeamNm.set(match.visitorTeamNm);
           this.revision = game.revision;
           this.skillToGoal = new Map(Object.entries(skillToGoal).map(([k, v]) => [Number(k), Number(v)]));
         }

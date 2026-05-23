@@ -1,3 +1,4 @@
 import { Game } from "../game.type";
+import { Match } from "../match.type";
 
-export type PlayerInfoInitResponse = { game: Game | null, skillToGoal: { [key: number]: number } };
+export type PlayerInfoInitResponse = { match: Match | null, game: Game | null, skillToGoal: { [key: number]: number } };
